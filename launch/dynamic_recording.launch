@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find spark_mini_description)/launch/description.launch" />
+    <!-- 
+        <node name="odom_to_tf" pkg="panorama" type="OdomTf.py"/>
+    -->
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--rate 0.2 $(find panorama)/rosbag/2022-03-18-15-47-58.bag"/>
+</launch>
