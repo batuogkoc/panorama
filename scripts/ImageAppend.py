@@ -36,7 +36,7 @@ class ImageAppend:
     def clear_img(self):
         self.image = np.zeros((self.height, self.width, self.depth))
 
-    def project(this, img, projected_points):
+    def project_a(this, img, projected_points):
         to_pts_abs = this.local_meter_to_local_pixel_coords(projected_points)
         corner_pixel_values = to_pts_abs.T
 
@@ -97,24 +97,25 @@ class ImageAppend:
         ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
 
         this.updateImage(ret)
-    def project_a(this, img, projected_points):
+    def project(this, img, projected_points):
         (img_height, img_width, _) = np.shape(img)
         to_pts_abs = this.local_meter_to_local_pixel_coords(projected_points)
-        this.append(img, this._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32), to_pts_abs)
+        from_pts = this._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
+        this.append(img, from_pts, to_pts_abs)
 
-    def append(this, img, src_pts, dst_pts):
-        # to_pts_abs = this.local_meter_to_local_pixel_coords(projected_points)
-        # corner_pixel_values = to_pts_abs.T
+    def append(this, img, from_pts, to_pts):
+        from_pts = from_pts.T
+        corner_pixel_values = to_pts.T
 
         #round the coordinates of the corners which are in home center pixel coordinate frame
-        # corner_pixel_values = np.round(corner_pixel_values).astype(np.int)
+        corner_pixel_values = np.round(corner_pixel_values).astype(np.int)
         (img_height, img_width, _) = np.shape(img)
         
         #get boundaries of the image to add
-        x_min_img = np.min(dst_pts[0])
-        x_max_img = np.max(dst_pts[0])
-        y_min_img = np.min(dst_pts[1])
-        y_max_img = np.max(dst_pts[1])
+        x_min_img = np.min(corner_pixel_values.T[0])
+        x_max_img = np.max(corner_pixel_values.T[0])
+        y_min_img = np.min(corner_pixel_values.T[1])
+        y_max_img = np.max(corner_pixel_values.T[1])
         
         #set the image width to span from the lowest x to the highest. Same with the height
         new_width = max(this.width+this.map_corner_coords[0][0], x_max_img+1) - min(this.map_corner_coords[0][0], x_min_img)
@@ -138,12 +139,11 @@ class ImageAppend:
         old_img_new_index = old_img_new_index.astype(np.float32)#needed for opencv for some reason
 
         #corners of the input image
-        from_pts = src_pts.T
         # from_pts = this._cartesian_cross_product([0,img_width-1], [0, img_height-1]).astype(np.float32)
         # from_pts = this._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32)
 
         #where the corners go (in pixel coordinates)
-        to_pts = ((dst_pts - this.map_corner_coords.T).T).astype(np.float32)
+        to_pts = ((corner_pixel_values.T - this.map_corner_coords.T).T).astype(np.float32)
 
         if not x_max_img == x_min_img and not y_max_img == y_min_img:
             #project the image only if the pixel values arent the same. the coordinate space is the same as old_img_new_index
@@ -161,8 +161,6 @@ class ImageAppend:
         old_img_new_index = cv2.bitwise_and(old_img_new_index, old_img_new_index, mask=mask_inv.astype(np.uint8))
 
         #stitch images
-        ret = old_img_new_index + new_img_new_index
+        ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
 
         this.updateImage(ret)
-    
-    

@@ -78,8 +78,6 @@ def main_camera_callback(data):
     panorama.update_camera_img("main_camera", main_camera_img)
     cv2.imwrite("projected.jpg", panorama.get_output_img())
 
-    main_time = time.time()-t
-    print(1/(main_time+left_time+right_time))
     frame = deepcopy(panorama.get_output_img())
     h, w, d = np.shape(frame)
     frame_masked = deepcopy(frame)
@@ -98,12 +96,13 @@ def main_camera_callback(data):
     for corner in right_handed_corners:
         cv2.circle(frame, tuple(corner), 5, (0,0,255),thickness = 3) 
     cv2.imwrite("img.jpg", frame.astype(np.float32))
-    cv2.imshow("a", frame)
-    cv2.waitKey(1)
+
     global out
     global first_time
 
     out.write(panorama.get_output_img().astype(np.uint8))
+    main_time = time.time()-t
+    print(1/(main_time+left_time+right_time))
     
     
 def left_camera_callback(data):
