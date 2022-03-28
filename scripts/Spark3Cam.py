@@ -72,9 +72,12 @@ def main_camera_callback(data):
     # panorama.update_camera_img("right_camera", right_camera_img)
     # left_camera_img = bridge.compressed_imgmsg_to_cv2(left_camera_data)
     # panorama.update_camera_img("left_camera", left_camera_img)
-    main_camera_img = bridge.compressed_imgmsg_to_cv2(data)
+    main_camera_img = deepcopy(bridge.compressed_imgmsg_to_cv2(data))
+
+    cv2.imwrite("raw.jpg", main_camera_img)
     panorama.update_camera_img("main_camera", main_camera_img)
-    
+    cv2.imwrite("projected.jpg", panorama.get_output_img())
+
     main_time = time.time()-t
     print(1/(main_time+left_time+right_time))
     frame = deepcopy(panorama.get_output_img())
@@ -91,10 +94,12 @@ def main_camera_callback(data):
     cv2.fillPoly(blank, [trapezoid], (255, 255, 255))
     frame_masked = cv2.bitwise_and(frame_masked, frame_masked, mask=cv2.bitwise_not(blank))
     right_handed_corners, _, _ = find_corners(frame_masked.astype(np.uint8))
+    print(len(right_handed_corners))
     for corner in right_handed_corners:
         cv2.circle(frame, tuple(corner), 5, (0,0,255),thickness = 3) 
-    
-    cv2.imwrite("img.jpg", frame)
+    cv2.imwrite("img.jpg", frame.astype(np.float32))
+    cv2.imshow("a", frame)
+    cv2.waitKey(1)
     global out
     global first_time
 

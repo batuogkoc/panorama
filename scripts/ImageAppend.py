@@ -36,7 +36,7 @@ class ImageAppend:
     def clear_img(self):
         self.image = np.zeros((self.height, self.width, self.depth))
 
-    def project_a(this, img, projected_points):
+    def project(this, img, projected_points):
         to_pts_abs = this.local_meter_to_local_pixel_coords(projected_points)
         corner_pixel_values = to_pts_abs.T
 
@@ -94,10 +94,10 @@ class ImageAppend:
         old_img_new_index = cv2.bitwise_and(old_img_new_index, old_img_new_index, mask=mask_inv.astype(np.uint8))
 
         #stitch images
-        ret = old_img_new_index + new_img_new_index
+        ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
 
         this.updateImage(ret)
-    def project(this, img, projected_points):
+    def project_a(this, img, projected_points):
         (img_height, img_width, _) = np.shape(img)
         to_pts_abs = this.local_meter_to_local_pixel_coords(projected_points)
         this.append(img, this._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32), to_pts_abs)
