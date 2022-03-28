@@ -19,6 +19,9 @@ class Panorama():
         """
         self.image_append = ImageAppend.ImageAppend(0, 0, step=0.01)
         self.cameras = {}
+    @staticmethod
+    def _focal_length(width, horizontal_fov):
+        return width/2/m.tan(horizontal_fov/2)
 
     @staticmethod
     def _calculateCamImgInitialPos(width, height, horizontal_fov):
@@ -26,17 +29,15 @@ class Panorama():
         # y = np.array([height/2, -(height/2)]).T
         y = np.array([-height/6, -(height/2)]).T
         x = np.array([-width/2, width/2]).T
+        print(x, y)
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
     @staticmethod
-    def _focal_length(width, horizontal_fov):
-        return width/2/m.tan(horizontal_fov/2)
-
-    @staticmethod
-    def _calculateCamImgInitialPos_a(width, width_low, width_high, height, height_low, height_high, focal_len):
+    def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
         # y = np.array([height/2, -(height/2)]).T
-        y = np.array([height/2-height_high, -height_low+(height/2)]).T
+        y = np.array([(height/2-height_low), (height/2-height_high)]).T
         x = np.array([width_low-width/2, width_high-width/2]).T
+        print(x, y)
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
 
@@ -85,7 +86,7 @@ class Panorama():
         """
         del(self.cameras[camera_name])
 
-    def update_camera_img(self, camera_name, camera_img):
+    def update_camera_img_a(self, camera_name, camera_img):
         """Project the newly recieved image for the camera in question
 
         Args:
@@ -113,23 +114,32 @@ class Panorama():
         
         self.image_append.project(camera_img, projected_points)
 
-    def update_camera_img_a(self, camera_name, camera_img, from_pts):
-        cam_pos = self.cameras[camera_name]["pos"]
-        cam_rotation = self.cameras[camera_name]["rot"]
+    def update_camera_img(self, camera_name, camera_img):
+        camera_pos = self.cameras[camera_name]["pos"]
+        camera_rot = self.cameras[camera_name]["rot"]
         width = self.cameras[camera_name]["width"]
         height = self.cameras[camera_name]["height"]
         horizontal_fov = self.cameras[camera_name]["horizontal_fov"]
+
+        (img_height, img_width, _) = np.shape(camera_img)
+        from_pts = self._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
+
         x_min = np.min(from_pts[:][0])
         x_max = np.max(from_pts[:][0])
         y_min = np.min(from_pts[:][1])
         y_max = np.max(from_pts[:][1])
-        corner_pts_start = _calculateCamImgInitialPos(width, x_min, x_max, height, y_min, y_max, _focal_length(width, horizontal_fov))
-        # print(corner_pts_start)
+        corner_pts_start = self._calculateCamImgInitialPos_with_ROI(width, x_min, x_max, height, y_min, y_max, self._focal_length(width, horizontal_fov))
+        print(corner_pts_start)
+        # corner_pts_start = self._calculateCamImgInitialPos(width, height, horizontal_fov)
+        print(corner_pts_start)
+
         corner_pts = np.matmul(camera_rot, corner_pts_start) + camera_pos
 
         projected_points = Panorama._project_points(corner_pts, camera_pos)
         
-        self.image_append.project(camera_img, projected_points)
+        to_pts_abs = self.image_append.local_meter_to_local_pixel_coords(projected_points)
+        self.image_append.append(camera_img, from_pts, to_pts_abs)
+        # self.image_append.project(camera_img, projected_points)
     
     def get_output_img(self):
         return self.image_append.image

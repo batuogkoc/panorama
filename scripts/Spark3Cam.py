@@ -96,7 +96,8 @@ def main_camera_callback(data):
     for corner in right_handed_corners:
         cv2.circle(frame, tuple(corner), 5, (0,0,255),thickness = 3) 
     cv2.imwrite("img.jpg", frame.astype(np.float32))
-
+    cv2.imshow("a", frame)
+    cv2.waitKey(1)
     global out
     global first_time
 
