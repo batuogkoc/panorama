@@ -30,12 +30,20 @@ class Panorama():
         x = np.array([-width/2, width/2]).T
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
+    # @staticmethod
+    # def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
+    #     # y = np.array([height/2, -(height/2)]).T
+    #     y = np.array([(height/2-height_low), (height/2-height_high)]).T
+    #     x = np.array([width_low-width/2, width_high-width/2]).T
+    #     return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
+
     @staticmethod
     def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
         # y = np.array([height/2, -(height/2)]).T
-        y = np.array([(height/2-height_low), (height/2-height_high)]).T
-        x = np.array([width_low-width/2, width_high-width/2]).T
-        return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
+        z = np.array([(height/2-height_low), (height/2-height_high)]).T
+        y = np.array([(width_low-width/2), (width_high-width/2)]).T
+        # return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
+        return np.vstack([-focal_len*np.ones((4)), Panorama._cartesian_cross_product(y, z).T])
 
 
     @staticmethod

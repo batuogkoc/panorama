@@ -186,7 +186,7 @@ def tf_to_rot_pos(transform):
     translation = transform.transform.translation
 
     rot_quat = np.array([rotation.w, rotation.x, rotation.y, rotation.z])
-    pos_transform = pos = np.array([[translation.x], [translation.y], [translation.z]])
+    pos_transform = pos = np.array([[translation.x], [-translation.y], [translation.z]])
 
     rot_matrix = quaternion_rotation_matrix(rot_quat)
     pos = pos_transform
