@@ -83,34 +83,6 @@ class Panorama():
         """
         del(self.cameras[camera_name])
 
-    def update_camera_img_a(self, camera_name, camera_img):
-        """Project the newly recieved image for the camera in question
-
-        Args:
-            camera_name (string): name of the camera that will be projected
-            camera_img (cv2.mat): opencv image matrix representing the image from the camera
-        """
-        cam_pos = self.cameras[camera_name]["pos"]
-        cam_rotation = self.cameras[camera_name]["rot"]
-        corner_pts_start = self.cameras[camera_name]["corner_pts_start"]
-        # print(corner_pts_start)
-        corner_pts = np.matmul(cam_rotation, corner_pts_start) + cam_pos
-
-        projected_points = Panorama._project_points(corner_pts, cam_pos)
-
-        # t_projected_points = np.vstack((projected_points, np.zeros((1,4))))
-        # print(t_projected_points)
-        # # plot_pts = np.hstack((np.hstack((corner_pts, cam_pos)), t_projected_points))
-        # plot_pts = np.hstack((t_projected_points, cam_pos))
-        # # print(plot_pts)
-        
-        # fig = plt.figure(figsize=(4,4))
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.scatter(plot_pts[0], plot_pts[1], plot_pts[2])
-        # plt.show()
-        
-        self.image_append.project(camera_img, projected_points)
-
     def update_camera_img(self, camera_name, camera_img):
         camera_pos = self.cameras[camera_name]["pos"]
         camera_rot = self.cameras[camera_name]["rot"]

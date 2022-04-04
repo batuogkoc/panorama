@@ -97,14 +97,14 @@ def main_camera_callback(data):
     for corner in other_corners:
         cv2.circle(frame, tuple(corner), 5, (255,0,0),thickness = 3) 
     cv2.imwrite("img.jpg", frame.astype(np.float32))
-    cv2.imshow("a", frame)
-    cv2.waitKey(1)
+    # cv2.imshow("a", frame)
+    # cv2.waitKey(1)
     global out
     global first_time
 
     out.write(panorama.get_output_img().astype(np.uint8))
     main_time = time.time()-t
-    print(1/(main_time+left_time+right_time))
+    # print(1/(main_time+left_time+right_time))
     
     
 def left_camera_callback(data):
@@ -173,9 +173,29 @@ def quaternion_rotation_matrix(Q):
                             
     return np.array(rot_matrix)
 
-# def tf_to_rot_pos(transform):
-#     rot_quat = transform.transform.roration
-#     pos_tf = transform.transform.
+def tf_to_rot_pos(transform):
+    pos_frame_align = np.array([[ 0.0000000,  1.0000000,  0.0000000],
+                                [-1.0000000,  0.0000000,  0.0000000],
+                                [ 0.0000000,  0.0000000,  1.0000000]])
+            
+    rot_frame_align = np.array([[ 0.0000000,  0.0000000, -1.0000000],
+                                [-1.0000000,  0.0000000,  0.0000000],
+                                [ 0.0000000,  1.0000000,  0.0000000]])
+    # rot_frame_align = np.matmul(pos_frame_align, rot_frame_align)
+    rotation = transform.transform.rotation
+    translation = transform.transform.translation
+
+    rot_quat = np.array([rotation.w, rotation.x, rotation.y, rotation.z])
+    pos_transform = pos = np.array([[translation.x], [translation.y], [translation.z]])
+
+    rot_matrix = quaternion_rotation_matrix(rot_quat)
+    pos = pos_transform
+    rot = rot_matrix
+    # pos = np.matmul(pos_frame_align, pos_transform)
+    # rot = np.matmul(rot_frame_align, rot_matrix)
+    print(rot)
+    return pos, rot
+
 
 def node():
     global main_camera_transform
@@ -205,62 +225,60 @@ def node():
             l_r_fov = 2*m.atan(1920/2/f)
             main_fov = 2*m.atan(1250/2/f)
 
-            pos_frame_align = np.array([[ 0.0000000,  1.0000000,  0.0000000],
-                                        [-1.0000000,  0.0000000,  0.0000000],
-                                        [ 0.0000000,  0.0000000,  1.0000000]])
-            
-            rot_frame_align = np.array([[ 0.0000000,  0.0000000, -1.0000000],
-                                        [-1.0000000,  0.0000000,  0.0000000],
-                                        [ 0.0000000,  1.0000000,  0.0000000]])
-
-            translation = main_camera_transform.transform.translation
-            pos = np.array([[translation.x], [translation.y], [translation.z]])
-            rot = np.array([[1.0000000,  0.0000000,  0.0000000],
-                            [0.0000000,  0.0000000, -1.0000000],
-                            [0.0000000,  1.0000000,  0.0000000]])
-            pos = np.matmul(frame_align, pos)
-            panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
-
-            translation = left_camera_transform.transform.translation
-            pos = np.array([[translation.x], [-translation.y], [translation.z]])
-            rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
-                            [ 0.7071068,  0.0000000, -0.7071068],
-                            [ 0.0000000,  1.0000000,  0.0000000]])
-            pos = np.matmul(frame_align, pos)
-
-            panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
-
-            translation = right_camera_transform.transform.translation
-            pos = np.array([[translation.x], [-translation.y], [translation.z]])
-            rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
-                            [-0.7071068,  0.0000000, -0.7071068],
-                            [ 0.0000000,  1.0000000,  0.0000000]])
-            pos = np.matmul(frame_align, pos)
-            panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
-
-
-            
-
-            # pos = np.array([[0], [1.219], [1.348]])
+            pos,rot = tf_to_rot_pos(main_camera_transform)
             # rot = np.array([[1.0000000,  0.0000000,  0.0000000],
             #                 [0.0000000,  0.0000000, -1.0000000],
             #                 [0.0000000,  1.0000000,  0.0000000]])
-            # panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
+            print("main")
+            panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
 
-            # translation = left_camera_transform.transform.translation
-            # pos = np.array([[-1], [1.219], [1]])
+            pos,rot = tf_to_rot_pos(left_camera_transform)
             # rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
             #                 [ 0.7071068,  0.0000000, -0.7071068],
             #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            # panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
+            print("left")
+            panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
 
-            # pos = np.array([[1], [1.219], [1]])
+            pos,rot = tf_to_rot_pos(right_camera_transform)
             # rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
             #                 [-0.7071068,  0.0000000, -0.7071068],
             #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            # panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
-        
+            print("right")
+            panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
 
+            # pos_frame_align = np.array([[ 0.0000000,  1.0000000,  0.0000000],
+            #                             [-1.0000000,  0.0000000,  0.0000000],
+            #                             [ 0.0000000,  0.0000000,  1.0000000]])
+            
+            # rot_frame_align = np.array([[ 0.0000000,  0.0000000, -1.0000000],
+            #                             [-1.0000000,  0.0000000,  0.0000000],
+            #                             [ 0.0000000,  1.0000000,  0.0000000]])
+
+            # translation = main_camera_transform.transform.translation
+            # pos = np.array([[translation.x], [translation.y], [translation.z]])
+            # rot = np.array([[1.0000000,  0.0000000,  0.0000000],
+            #                 [0.0000000,  0.0000000, -1.0000000],
+            #                 [0.0000000,  1.0000000,  0.0000000]])
+            # pos = np.matmul(frame_align, pos)
+            # panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
+
+            # translation = left_camera_transform.transform.translation
+            # pos = np.array([[translation.x], [-translation.y], [translation.z]])
+            # rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
+            #                 [ 0.7071068,  0.0000000, -0.7071068],
+            #                 [ 0.0000000,  1.0000000,  0.0000000]])
+            # pos = np.matmul(frame_align, pos)
+
+            # panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
+
+            # translation = right_camera_transform.transform.translation
+            # pos = np.array([[translation.x], [-translation.y], [translation.z]])
+            # rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
+            #                 [-0.7071068,  0.0000000, -0.7071068],
+            #                 [ 0.0000000,  1.0000000,  0.0000000]])
+            # pos = np.matmul(frame_align, pos)
+            # panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
+    
             get_tf = False
         except Exception as e:
             rospy.logerr(e)
