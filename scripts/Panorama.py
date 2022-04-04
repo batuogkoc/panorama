@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 
-
 class Panorama():
     """
     Class for multi camera panaromic pictures
@@ -29,7 +28,6 @@ class Panorama():
         # y = np.array([height/2, -(height/2)]).T
         y = np.array([-height/6, -(height/2)]).T
         x = np.array([-width/2, width/2]).T
-        print(x, y)
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
     @staticmethod
@@ -37,7 +35,6 @@ class Panorama():
         # y = np.array([height/2, -(height/2)]).T
         y = np.array([(height/2-height_low), (height/2-height_high)]).T
         x = np.array([width_low-width/2, width_high-width/2]).T
-        print(x, y)
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
 
@@ -129,9 +126,7 @@ class Panorama():
         y_min = np.min(from_pts[:][1])
         y_max = np.max(from_pts[:][1])
         corner_pts_start = self._calculateCamImgInitialPos_with_ROI(width, x_min, x_max, height, y_min, y_max, self._focal_length(width, horizontal_fov))
-        print(corner_pts_start)
         # corner_pts_start = self._calculateCamImgInitialPos(width, height, horizontal_fov)
-        print(corner_pts_start)
 
         corner_pts = np.matmul(camera_rot, corner_pts_start) + camera_pos
 
