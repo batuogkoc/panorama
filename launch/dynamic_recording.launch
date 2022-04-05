@@ -1,5 +1,5 @@
 <launch>
-    <include file="$(find spark_mini_description)/launch/description.launch" />
+    <include file="$(find spark_mini_description)/launch/description_dynamic.launch" />
     <!-- 
         <node name="odom_to_tf" pkg="panorama" type="OdomTf.py"/>
     -->

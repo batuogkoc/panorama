@@ -92,6 +92,10 @@ class Panorama():
         """
         del(self.cameras[camera_name])
 
+    def update_camera_pos_rot(self, camera_name, camera_pos, camera_rot):
+        self.cameras[camera_name]["pos"] = camera_pos
+        self.cameras[camera_name]["rot"] = camera_rot
+    
     def update_camera_img(self, camera_name, camera_img):
         camera_pos = self.cameras[camera_name]["pos"]
         camera_rot = self.cameras[camera_name]["rot"]

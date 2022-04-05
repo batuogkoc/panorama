@@ -14,20 +14,13 @@ import time
 import math as m
 from copy import deepcopy
 
-# global tf_buffer
 tf_buffer = tf2_ros.Buffer()
-# global tf_listener
 tf_listener = None
 bridge = cv_bridge.CvBridge()
 
 main_camera_data = None
 left_camera_data = None
 right_camera_data = None
-
-odom_current = None
-main_camera_odom = None
-left_camera_odom = None
-right_camera_odom = None
 
 main_camera_transform = None
 left_camera_transform = None
@@ -92,28 +85,16 @@ def tf_to_pos_rot(transform):
   
     
 def left_camera_callback(data):
-    t = time.time()
     global left_camera_data
-    global right_time
-    global right_camera_odom
-    global odom_current
     left_camera_data = deepcopy(data)
-    right_camera_odom = deepcopy(odom_current)
-
-    left_time = time.time()-t
 
 def right_camera_callback(data):
-    t = time.time()
     global right_camera_data
-    global right_time
-    global right_camera_odom
-    global odom_current
     right_camera_data = deepcopy(data)
-    right_camera_odom = deepcopy(odom_current)
-    
-    right_time = time.time()-t
+
 
 def main_camera_callback(data):
+    t = time.time()
     global main_camera_data 
     global left_camera_data
     global right_camera_data
@@ -122,11 +103,24 @@ def main_camera_callback(data):
     global main_camera_odom
     global left_camera_odom
     global right_camera_odom
+    source = "map"
+    try:
+        main_camera_transform = tf_buffer.lookup_transform(source, "main_camera", rospy.Time(0), rospy.Duration(1.0))
+        left_camera_transform = tf_buffer.lookup_transform(source, "left_camera", rospy.Time(0), rospy.Duration(1.0))
+        right_camera_transform = tf_buffer.lookup_transform(source, "right_camera", rospy.Time(0), rospy.Duration(1.0))
+    except:
+        rospy.logerr("couldn't get tf")
 
-    global main_camera_transform
-    global left_camera_transform
-    global right_camera_transform
-    t = time.time()
+    pos,rot = tf_to_pos_rot(main_camera_transform)
+    panorama.update_camera_pos_rot("main_camera", pos, rot)
+
+    pos,rot = tf_to_pos_rot(left_camera_transform)
+    panorama.update_camera_pos_rot("left_camera", pos, rot)
+
+    pos,rot = tf_to_pos_rot(right_camera_transform)
+    panorama.update_camera_pos_rot("right_camera", pos, rot)
+
+    
 
     right_camera_img = bridge.compressed_imgmsg_to_cv2(right_camera_data)
     panorama.update_camera_img("right_camera", right_camera_img)
@@ -164,7 +158,7 @@ def main_camera_callback(data):
 
     out.write(panorama.get_output_img().astype(np.uint8))
     main_time = time.time()-t
-    print(1/(main_time+left_time+right_time))
+    print(1/(main_time+left_time+right_time), 1/main_time)
 
 def node():
     global main_camera_transform
@@ -194,59 +188,14 @@ def node():
             main_fov = 2*m.atan(1250/2/f)
 
             pos,rot = tf_to_pos_rot(main_camera_transform)
-            # rot = np.array([[1.0000000,  0.0000000,  0.0000000],
-            #                 [0.0000000,  0.0000000, -1.0000000],
-            #                 [0.0000000,  1.0000000,  0.0000000]])
-            print("main")
             panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
 
             pos,rot = tf_to_pos_rot(left_camera_transform)
-            # rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
-            #                 [ 0.7071068,  0.0000000, -0.7071068],
-            #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            print("left")
             panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
 
             pos,rot = tf_to_pos_rot(right_camera_transform)
-            # rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
-            #                 [-0.7071068,  0.0000000, -0.7071068],
-            #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            print("right")
             panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
 
-            # pos_frame_align = np.array([[ 0.0000000,  1.0000000,  0.0000000],
-            #                             [-1.0000000,  0.0000000,  0.0000000],
-            #                             [ 0.0000000,  0.0000000,  1.0000000]])
-            
-            # rot_frame_align = np.array([[ 0.0000000,  0.0000000, -1.0000000],
-            #                             [-1.0000000,  0.0000000,  0.0000000],
-            #                             [ 0.0000000,  1.0000000,  0.0000000]])
-
-            # translation = main_camera_transform.transform.translation
-            # pos = np.array([[translation.x], [translation.y], [translation.z]])
-            # rot = np.array([[1.0000000,  0.0000000,  0.0000000],
-            #                 [0.0000000,  0.0000000, -1.0000000],
-            #                 [0.0000000,  1.0000000,  0.0000000]])
-            # pos = np.matmul(frame_align, pos)
-            # panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
-
-            # translation = left_camera_transform.transform.translation
-            # pos = np.array([[translation.x], [-translation.y], [translation.z]])
-            # rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
-            #                 [ 0.7071068,  0.0000000, -0.7071068],
-            #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            # pos = np.matmul(frame_align, pos)
-
-            # panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
-
-            # translation = right_camera_transform.transform.translation
-            # pos = np.array([[translation.x], [-translation.y], [translation.z]])
-            # rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
-            #                 [-0.7071068,  0.0000000, -0.7071068],
-            #                 [ 0.0000000,  1.0000000,  0.0000000]])
-            # pos = np.matmul(frame_align, pos)
-            # panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
-    
             get_tf = False
         except Exception as e:
             rospy.logerr(e)
