@@ -110,6 +110,7 @@ class Panorama():
         x_max = np.max(from_pts[:][0])
         y_min = np.min(from_pts[:][1])
         y_max = np.max(from_pts[:][1])
+        
         corner_pts_start = self._calculateCamImgInitialPos_with_ROI(width, x_min, x_max, height, y_min, y_max, self._focal_length(width, horizontal_fov))
         # corner_pts_start = self._calculateCamImgInitialPos(width, height, horizontal_fov)
 

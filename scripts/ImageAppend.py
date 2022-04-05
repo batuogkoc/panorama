@@ -114,8 +114,23 @@ class ImageAppend:
                 y_0 = poly_pts[0][1]
                 x_1 = poly_pts[1][0]
                 y_1 = poly_pts[1][1]
-                # if
-                poly_pts = np.vstack((poly_pts[0], [poly_pts[0][0],  poly_pts[1][1]], poly_pts[1:]))
+                dx_1 = x_1-x_0
+                dy_1 = -(y_1-y_0)
+                if dx_1 > 0:
+                    if dy_1 > 0:
+                        midpoint = [x_0, y_1]
+                        print("1")
+                    else:
+                        midpoint = [x_1, y_0]
+                        print("4")
+                else:
+                    if dy_1 > 0:
+                        midpoint = [x_1, y_0]
+                        print("2")
+                    else:
+                        midpoint = [x_0, y_1]
+                        print("3")
+                poly_pts = np.vstack((poly_pts[0], midpoint, poly_pts[1:]))
                 print(poly_pts)
                 cv2.fillPoly(mask, np.int32([poly_pts]), (255))
                 new_img_new_index = cv2.bitwise_and(new_img_new_index, new_img_new_index, mask=mask)    
