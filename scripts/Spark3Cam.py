@@ -31,7 +31,7 @@ main_camera_transform = None
 left_camera_transform = None
 right_camera_transform = None
 fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-out = cv2.VideoWriter("output.avi", fourcc, 15, (1127, 721))
+out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
 first_time = True
 
 main_time = 0
@@ -215,12 +215,12 @@ def main_camera_callback(data):
     # for corner in other_corners:
     #     cv2.circle(frame, tuple(corner), 5, (255,0,0),thickness = 3) 
     # cv2.imwrite("img.jpg", frame.astype(np.float32))
-    imshow_r("a", frame, (600, 400))
+    resized_img = imshow_r("a", frame, (1920, 1080))
     cv2.waitKey(1)
     global out
     global first_time
 
-    # out.write(panorama.get_output_img().astype(np.uint8))
+    out.write(resized_img)
     main_time = time.time()-t
     print(1/(main_time+left_time+right_time), 1/main_time)
 
