@@ -134,23 +134,34 @@ def main_camera_callback(data):
 
     try:
         main_camera_transform = tf_buffer.lookup_transform(source, "main_camera", rospy.Time(0), rospy.Duration(1.0))
-        main_camera_transform_local = tf_buffer.lookup_transform("map", "main_camera", rospy.Time(0), rospy.Duration(1.0))
+        map_tranform = tf_buffer.lookup_transform("odom", "map", rospy.Time(0), rospy.Duration(1.0))
     except:
         rospy.logerr("couldn't get main_camera tf")
     
     left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
     right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
     main_camera_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform)
-    main_camera_local_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform_local)
+    map_tranform_htm = geometry_msgs_TransformStamped_to_htm(map_tranform)
+    x_len = m.sqrt(map_tranform_htm[0][0]**2 + map_tranform_htm[0][1]**2)
+    y_len = m.sqrt(map_tranform_htm[1][0]**2 + map_tranform_htm[1][1]**2)
 
-    main_camera_htm_inv = ts.inverse_matrix(main_camera_htm)
-    main_to_left_htm = np.matmul(main_camera_htm_inv, left_camera_htm)
-    main_to_right_htm = np.matmul(main_camera_htm_inv, right_camera_htm)
+    map_tranform_htm_only_z_rot = np.copy(map_tranform_htm)
+    map_tranform_htm_only_z_rot[:,0] = map_tranform_htm_only_z_rot[:,0]/x_len
+    map_tranform_htm_only_z_rot[:,1] = map_tranform_htm_only_z_rot[:,1]/y_len
+    map_tranform_htm_only_z_rot[:,2] = np.array([[0,0,1,0]])
+    map_tranform_htm_only_z_rot[2,0:2] = np.array([0,0])
 
-    right_local_htm = np.matmul(main_camera_local_htm, main_to_right_htm)
-    left_local_htm = np.matmul(main_camera_local_htm, main_to_left_htm)
+    map_tranform_htm_only_z_rot_inv = ts.inverse_matrix(map_tranform_htm_only_z_rot)
+    print(map_tranform_htm_only_z_rot)
+    # main_camera_htm_inv = ts.inverse_matrix(main_camera_htm)
+    # main_to_left_htm = np.matmul(main_camera_htm_inv, left_camera_htm)
+    # main_to_right_htm = np.matmul(main_camera_htm_inv, right_camera_htm)
 
-    pos,rot = geometry_msgs_TransformStamped_to_pos_rot(main_camera_transform_local)
+    main_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, main_camera_htm)
+    right_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, right_camera_htm)
+    left_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, left_camera_htm)
+
+    pos,rot = htm_to_pos_rot(main_local_htm)
     print(pos, rot)
     panorama.update_camera_pos_rot("main_camera", pos, rot)
 
