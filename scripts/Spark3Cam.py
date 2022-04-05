@@ -6,7 +6,10 @@ import Panorama
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import TransformStamped
+import geometry_msgs
 import tf2_ros
+import tf.transformations as ts
+import tf
 import numpy as np
 import cv_bridge
 import cv2
@@ -23,6 +26,7 @@ main_camera_data = None
 left_camera_data = None
 right_camera_data = None
 
+source = "map"
 main_camera_transform = None
 left_camera_transform = None
 right_camera_transform = None
@@ -73,7 +77,7 @@ def quaternion_rotation_matrix(Q):
                             
     return np.array(rot_matrix)
 
-def tf_to_pos_rot(transform):
+def geometry_msgs_TransformStamped_to_pos_rot(transform):
     rotation = transform.transform.rotation
     translation = transform.transform.translation
 
@@ -83,15 +87,38 @@ def tf_to_pos_rot(transform):
     rot_matrix = quaternion_rotation_matrix(rot_quat)
 
     return pos_transform, rot_matrix
-  
+
+def htm_to_pos_rot(htm):
+    pos = np.array([ts.translation_from_matrix(htm)]).T
+    rot = htm[0:3,0:3]
+    return pos, rot
+
+def geometry_msgs_TransformStamped_to_htm(transform_stamped):
+    trans = transform_stamped.transform.translation
+    rot = transform_stamped.transform.rotation
+    trans = [trans.x, trans.y, trans.z]
+    rot = [rot.x, rot.y, rot.z, rot.w]
+    return ts.concatenate_matrices(ts.translation_matrix(trans), ts.quaternion_matrix(rot))
     
 def left_camera_callback(data):
     global left_camera_data
-    left_camera_data = deepcopy(data)
+    global left_camera_transform
+    global tf_buffer
+    try:
+        left_camera_transform = tf_buffer.lookup_transform(source, "left_camera", rospy.Time(0), rospy.Duration(1.0))
+        left_camera_data = deepcopy(data)
+    except:
+        rospy.logerr("couldn't get left_camera tf")
 
 def right_camera_callback(data):
     global right_camera_data
-    right_camera_data = deepcopy(data)
+    global right_camera_transform
+    global tf_buffer
+    try:
+        right_camera_transform = tf_buffer.lookup_transform(source, "right_camera", rospy.Time(0), rospy.Duration(1.0))
+        right_camera_data = deepcopy(data)
+    except:
+        rospy.logerr("couldn't get right_camera tf")
 
 
 def main_camera_callback(data):
@@ -100,28 +127,50 @@ def main_camera_callback(data):
     global left_camera_data
     global right_camera_data
 
-    global odom_current
-    global main_camera_odom
-    global left_camera_odom
-    global right_camera_odom
-    source = "map"
+    global source
+    global main_camera_transform
+    global left_camera_transform
+    global right_camera_transform
+
     try:
         main_camera_transform = tf_buffer.lookup_transform(source, "main_camera", rospy.Time(0), rospy.Duration(1.0))
-        left_camera_transform = tf_buffer.lookup_transform(source, "left_camera", rospy.Time(0), rospy.Duration(1.0))
-        right_camera_transform = tf_buffer.lookup_transform(source, "right_camera", rospy.Time(0), rospy.Duration(1.0))
+        main_camera_transform_local = tf_buffer.lookup_transform("map", "main_camera", rospy.Time(0), rospy.Duration(1.0))
     except:
-        rospy.logerr("couldn't get tf")
+        rospy.logerr("couldn't get main_camera tf")
+    
+    left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
+    right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
+    main_camera_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform)
+    main_camera_local_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform_local)
 
-    pos,rot = tf_to_pos_rot(main_camera_transform)
+    main_camera_htm_inv = ts.inverse_matrix(main_camera_htm)
+    main_to_left_htm = np.matmul(main_camera_htm_inv, left_camera_htm)
+    main_to_right_htm = np.matmul(main_camera_htm_inv, right_camera_htm)
+
+    right_local_htm = np.matmul(main_camera_local_htm, main_to_right_htm)
+    left_local_htm = np.matmul(main_camera_local_htm, main_to_left_htm)
+
+    pos,rot = geometry_msgs_TransformStamped_to_pos_rot(main_camera_transform_local)
     panorama.update_camera_pos_rot("main_camera", pos, rot)
 
-    pos,rot = tf_to_pos_rot(left_camera_transform)
+    pos, rot= htm_to_pos_rot(left_local_htm)
     panorama.update_camera_pos_rot("left_camera", pos, rot)
 
-    pos,rot = tf_to_pos_rot(right_camera_transform)
+    pos,rot = htm_to_pos_rot(right_local_htm)
     panorama.update_camera_pos_rot("right_camera", pos, rot)
 
-    
+
+
+
+    # pos,rot = geometry_msgs_TransformStamped_to_pos_rot(main_camera_transform)
+    # panorama.update_camera_pos_rot("main_camera", pos, rot)
+
+    # pos,rot = geometry_msgs_TransformStamped_to_pos_rot(left_camera_transform)
+    # panorama.update_camera_pos_rot("left_camera", pos, rot)
+
+    # pos,rot = geometry_msgs_TransformStamped_to_pos_rot(right_camera_transform)
+    # panorama.update_camera_pos_rot("right_camera", pos, rot)
+
 
     right_camera_img = bridge.compressed_imgmsg_to_cv2(right_camera_data)
     panorama.update_camera_img("right_camera", right_camera_img)
@@ -188,13 +237,13 @@ def node():
             l_r_fov = 2*m.atan(1920/2/f)
             main_fov = 2*m.atan(1250/2/f)
 
-            pos,rot = tf_to_pos_rot(main_camera_transform)
+            pos,rot = geometry_msgs_TransformStamped_to_pos_rot(main_camera_transform)
             panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
 
-            pos,rot = tf_to_pos_rot(left_camera_transform)
+            pos,rot = geometry_msgs_TransformStamped_to_pos_rot(left_camera_transform)
             panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
 
-            pos,rot = tf_to_pos_rot(right_camera_transform)
+            pos,rot = geometry_msgs_TransformStamped_to_pos_rot(right_camera_transform)
             panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
 
             get_tf = False
