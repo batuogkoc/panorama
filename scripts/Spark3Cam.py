@@ -26,7 +26,7 @@ main_camera_data = None
 left_camera_data = None
 right_camera_data = None
 
-source = "map"
+source = "odom"
 main_camera_transform = None
 left_camera_transform = None
 right_camera_transform = None
@@ -151,12 +151,15 @@ def main_camera_callback(data):
     left_local_htm = np.matmul(main_camera_local_htm, main_to_left_htm)
 
     pos,rot = geometry_msgs_TransformStamped_to_pos_rot(main_camera_transform_local)
+    print(pos, rot)
     panorama.update_camera_pos_rot("main_camera", pos, rot)
 
     pos, rot= htm_to_pos_rot(left_local_htm)
+    print(pos, rot)
     panorama.update_camera_pos_rot("left_camera", pos, rot)
 
     pos,rot = htm_to_pos_rot(right_local_htm)
+    print(pos, rot)
     panorama.update_camera_pos_rot("right_camera", pos, rot)
 
 
@@ -171,7 +174,7 @@ def main_camera_callback(data):
     # pos,rot = geometry_msgs_TransformStamped_to_pos_rot(right_camera_transform)
     # panorama.update_camera_pos_rot("right_camera", pos, rot)
 
-
+    panorama.clear_img()
     right_camera_img = bridge.compressed_imgmsg_to_cv2(right_camera_data)
     panorama.update_camera_img("right_camera", right_camera_img)
     left_camera_img = bridge.compressed_imgmsg_to_cv2(left_camera_data)
