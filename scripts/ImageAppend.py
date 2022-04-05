@@ -24,10 +24,26 @@ class ImageAppend:
         this.depth = img_depth
         this.image = new_img
 
-    def local_meter_to_local_pixel_coords(this, local_meter_coords):
-        local_meter_coords_temp = np.copy(local_meter_coords)
+    # def local_meter_to_local_pixel_coords(this, local_meter_coords):
+    #     local_meter_coords_temp = np.copy(local_meter_coords)
 
-        local_meter_coords_temp[1] = -local_meter_coords_temp[1]
+    #     local_meter_coords_temp[1] = -local_meter_coords_temp[1]
+
+    #     local_pixel_coords = local_meter_coords_temp/this.step
+
+    #     return local_pixel_coords.astype(np.float32)
+
+    def local_meter_to_local_pixel_coords(this, local_meter_coords):
+        assert np.shape(local_meter_coords)[0] == 2 or np.shape(local_meter_coords)[0] == 3, "invalid local_meter_coords shape, expected 2xn or 3xn"
+        local_meter_coords_temp = np.copy(local_meter_coords)
+        if np.shape(local_meter_coords)[0] == 3:
+            transform = np.array([[ 0.0000000, -1.0000000,  0.0000000],
+                                  [-1.0000000,  0.0000000,  0.0000000],
+                                  [ 0.0000000,  0.0000000,  1.0000000]])
+        elif np.shape(local_meter_coords)[0] == 2:
+            transform = np.array([[ 0.0000000, -1.0000000],
+                                  [-1.0000000,  0.0000000]])
+        local_meter_coords_temp = np.matmul(transform, local_meter_coords)
 
         local_pixel_coords = local_meter_coords_temp/this.step
 

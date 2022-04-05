@@ -39,11 +39,12 @@ class Panorama():
 
     @staticmethod
     def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
-        # y = np.array([height/2, -(height/2)]).T
-        z = np.array([(height/2-height_low), (height/2-height_high)]).T
-        y = np.array([(width_low-width/2), (width_high-width/2)]).T
-        # return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
-        return np.vstack([-focal_len*np.ones((4)), Panorama._cartesian_cross_product(y, z).T])
+        image_y = np.array([height_low, height_high]).T
+        image_x = np.array([width_low, width_high]).T
+
+        camera_frame_z = -image_y + height/2
+        camera_frame_y = -image_x + width/2
+        return np.vstack([focal_len*np.ones((4)), Panorama._cartesian_cross_product(camera_frame_y.T, camera_frame_z.T).T])
 
 
     @staticmethod

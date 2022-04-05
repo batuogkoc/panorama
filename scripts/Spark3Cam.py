@@ -39,100 +39,6 @@ first_time = True
 main_time = 0
 right_time = 0
 left_time = 0
-
-def odom_to_transform(odom):
-    
-    ret.transform.translation = odom.pose.pose.position
-    ret.transform.rotation = odom.pose.pose.orientation
-    ret.header = odom.header
-    return ret
-
-def main_camera_callback(data):
-    global main_camera_data 
-    global left_camera_data
-    global right_camera_data
-
-    global odom_current
-    global main_camera_odom
-    global left_camera_odom
-    global right_camera_odom
-
-    global main_camera_transform
-    global left_camera_transform
-    global right_camera_transform
-    t = time.time()
-
-    # main_camera_odom = deepcopy(odom_current)
-    # main_camera_odom_t = odom_to_transform(main_camera_odom)
-    # left_camera_odom_t = odom_to_transform(left_camera_odom)
-    # right_camera_odom_t = odom_to_transform(right_camera_odom)
-
-    # main_to_right_odom_t = tf2_ros.Trans
-    right_camera_img = bridge.compressed_imgmsg_to_cv2(right_camera_data)
-    panorama.update_camera_img("right_camera", right_camera_img)
-    left_camera_img = bridge.compressed_imgmsg_to_cv2(left_camera_data)
-    panorama.update_camera_img("left_camera", left_camera_img)
-    main_camera_img = deepcopy(bridge.compressed_imgmsg_to_cv2(data))
-    panorama.update_camera_img("main_camera", main_camera_img)
-
-    frame = deepcopy(panorama.get_output_img())
-    h, w, d = np.shape(frame)
-    frame_masked = deepcopy(frame)
-    blank = np.zeros((h,w), np.uint8)
-    trapezoid = np.array([[400, 570],
-                        [730, 570],
-                        [730, 500],
-                        [600, 410],
-                        [530, 410],
-                        [400, 500]], np.int32)
-    trapezoid = trapezoid.reshape((-1, 1, 2))
-    cv2.fillPoly(blank, [trapezoid], (255, 255, 255))
-    frame_masked = cv2.bitwise_and(frame_masked, frame_masked, mask=cv2.bitwise_not(blank))
-    right_handed_corners, left_handed_corners, other_corners = find_corners(frame_masked.astype(np.uint8))
-
-    for corner in right_handed_corners:
-        cv2.circle(frame, tuple(corner), 5, (0,0,255),thickness = 3) 
-    for corner in left_handed_corners:
-        cv2.circle(frame, tuple(corner), 5, (0,255,0),thickness = 3) 
-    for corner in other_corners:
-        cv2.circle(frame, tuple(corner), 5, (255,0,0),thickness = 3) 
-    cv2.imwrite("img.jpg", frame.astype(np.float32))
-    # cv2.imshow("a", frame)
-    # cv2.waitKey(1)
-    global out
-    global first_time
-
-    out.write(panorama.get_output_img().astype(np.uint8))
-    main_time = time.time()-t
-    # print(1/(main_time+left_time+right_time))
-    
-    
-def left_camera_callback(data):
-    t = time.time()
-    global left_camera_data
-    global right_time
-    global right_camera_odom
-    global odom_current
-    left_camera_data = deepcopy(data)
-    right_camera_odom = deepcopy(odom_current)
-
-    left_time = time.time()-t
-
-def right_camera_callback(data):
-    t = time.time()
-    global right_camera_data
-    global right_time
-    global right_camera_odom
-    global odom_current
-    right_camera_data = deepcopy(data)
-    right_camera_odom = deepcopy(odom_current)
-    
-    right_time = time.time()-t
-
-def odomCallback(data):
-    global odom_current
-    odom_current = data
-
 def quaternion_rotation_matrix(Q):
     """
     Covert a quaternion into a full three-dimensional rotation matrix.
@@ -173,15 +79,7 @@ def quaternion_rotation_matrix(Q):
                             
     return np.array(rot_matrix)
 
-def tf_to_rot_pos(transform):
-    pos_frame_align = np.array([[ 0.0000000,  1.0000000,  0.0000000],
-                                [-1.0000000,  0.0000000,  0.0000000],
-                                [ 0.0000000,  0.0000000,  1.0000000]])
-            
-    rot_frame_align = np.array([[ 0.0000000,  0.0000000, -1.0000000],
-                                [-1.0000000,  0.0000000,  0.0000000],
-                                [ 0.0000000,  1.0000000,  0.0000000]])
-    # rot_frame_align = np.matmul(pos_frame_align, rot_frame_align)
+def tf_to_pos_rot(transform):
     rotation = transform.transform.rotation
     translation = transform.transform.translation
 
@@ -189,13 +87,84 @@ def tf_to_rot_pos(transform):
     pos_transform = pos = np.array([[translation.x], [-translation.y], [translation.z]])
 
     rot_matrix = quaternion_rotation_matrix(rot_quat)
-    pos = pos_transform
-    rot = rot_matrix
-    # pos = np.matmul(pos_frame_align, pos_transform)
-    # rot = np.matmul(rot_frame_align, rot_matrix)
-    print(rot)
-    return pos, rot
 
+    return pos_transform, rot_matrix
+  
+    
+def left_camera_callback(data):
+    t = time.time()
+    global left_camera_data
+    global right_time
+    global right_camera_odom
+    global odom_current
+    left_camera_data = deepcopy(data)
+    right_camera_odom = deepcopy(odom_current)
+
+    left_time = time.time()-t
+
+def right_camera_callback(data):
+    t = time.time()
+    global right_camera_data
+    global right_time
+    global right_camera_odom
+    global odom_current
+    right_camera_data = deepcopy(data)
+    right_camera_odom = deepcopy(odom_current)
+    
+    right_time = time.time()-t
+
+def main_camera_callback(data):
+    global main_camera_data 
+    global left_camera_data
+    global right_camera_data
+
+    global odom_current
+    global main_camera_odom
+    global left_camera_odom
+    global right_camera_odom
+
+    global main_camera_transform
+    global left_camera_transform
+    global right_camera_transform
+    t = time.time()
+
+    right_camera_img = bridge.compressed_imgmsg_to_cv2(right_camera_data)
+    panorama.update_camera_img("right_camera", right_camera_img)
+    left_camera_img = bridge.compressed_imgmsg_to_cv2(left_camera_data)
+    panorama.update_camera_img("left_camera", left_camera_img)
+    main_camera_img = deepcopy(bridge.compressed_imgmsg_to_cv2(data))
+    panorama.update_camera_img("main_camera", main_camera_img)
+
+    frame = deepcopy(panorama.get_output_img())
+    # h, w, d = np.shape(frame)
+    # frame_masked = deepcopy(frame)
+    # blank = np.zeros((h,w), np.uint8)
+    # trapezoid = np.array([[400, 570],
+    #                     [730, 570],
+    #                     [730, 500],
+    #                     [600, 410],
+    #                     [530, 410],
+    #                     [400, 500]], np.int32)
+    # trapezoid = trapezoid.reshape((-1, 1, 2))
+    # cv2.fillPoly(blank, [trapezoid], (255, 255, 255))
+    # frame_masked = cv2.bitwise_and(frame_masked, frame_masked, mask=cv2.bitwise_not(blank))
+    # right_handed_corners, left_handed_corners, other_corners = find_corners(frame_masked.astype(np.uint8))
+
+    # for corner in right_handed_corners:
+    #     cv2.circle(frame, tuple(corner), 5, (0,0,255),thickness = 3) 
+    # for corner in left_handed_corners:
+    #     cv2.circle(frame, tuple(corner), 5, (0,255,0),thickness = 3) 
+    # for corner in other_corners:
+    #     cv2.circle(frame, tuple(corner), 5, (255,0,0),thickness = 3) 
+    cv2.imwrite("img.jpg", frame.astype(np.float32))
+    # cv2.imshow("a", frame)
+    # cv2.waitKey(1)
+    global out
+    global first_time
+
+    out.write(panorama.get_output_img().astype(np.uint8))
+    main_time = time.time()-t
+    print(1/(main_time+left_time+right_time))
 
 def node():
     global main_camera_transform
@@ -205,7 +174,6 @@ def node():
     global panorama
     rospy.init_node("panorama", anonymous=True)
     tf_listener = tf2_ros.TransformListener(tf_buffer)
-    rospy.Subscriber("odom", Odometry, odomCallback)
     rospy.Subscriber("main_camera/image/compressed", CompressedImage, main_camera_callback)
     rospy.Subscriber("left_camera/image/compressed", CompressedImage, left_camera_callback)
     rospy.Subscriber("right_camera/image/compressed", CompressedImage, right_camera_callback)
@@ -225,21 +193,21 @@ def node():
             l_r_fov = 2*m.atan(1920/2/f)
             main_fov = 2*m.atan(1250/2/f)
 
-            pos,rot = tf_to_rot_pos(main_camera_transform)
+            pos,rot = tf_to_pos_rot(main_camera_transform)
             # rot = np.array([[1.0000000,  0.0000000,  0.0000000],
             #                 [0.0000000,  0.0000000, -1.0000000],
             #                 [0.0000000,  1.0000000,  0.0000000]])
             print("main")
             panorama.add_camera("main_camera", pos, rot, 1250, 1080, main_fov)
 
-            pos,rot = tf_to_rot_pos(left_camera_transform)
+            pos,rot = tf_to_pos_rot(left_camera_transform)
             # rot = np.array([[ 0.7071068,  0.0000000,  0.7071068],
             #                 [ 0.7071068,  0.0000000, -0.7071068],
             #                 [ 0.0000000,  1.0000000,  0.0000000]])
             print("left")
             panorama.add_camera("left_camera", pos, rot, 1920, 1080, l_r_fov)
 
-            pos,rot = tf_to_rot_pos(right_camera_transform)
+            pos,rot = tf_to_pos_rot(right_camera_transform)
             # rot = np.array([[ 0.7071068,  0.0000000, -0.7071068],
             #                 [-0.7071068,  0.0000000, -0.7071068],
             #                 [ 0.0000000,  1.0000000,  0.0000000]])
