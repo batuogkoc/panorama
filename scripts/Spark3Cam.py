@@ -13,6 +13,7 @@ import cv2
 import time
 import math as m
 from copy import deepcopy
+from ResizableImShow import *
 
 tf_buffer = tf2_ros.Buffer()
 tf_listener = None
@@ -150,13 +151,13 @@ def main_camera_callback(data):
     #     cv2.circle(frame, tuple(corner), 5, (0,255,0),thickness = 3) 
     # for corner in other_corners:
     #     cv2.circle(frame, tuple(corner), 5, (255,0,0),thickness = 3) 
-    cv2.imwrite("img.jpg", frame.astype(np.float32))
-    # cv2.imshow("a", frame)
-    # cv2.waitKey(1)
+    # cv2.imwrite("img.jpg", frame.astype(np.float32))
+    imshow_r("a", frame, (600, 400))
+    cv2.waitKey(1)
     global out
     global first_time
 
-    out.write(panorama.get_output_img().astype(np.uint8))
+    # out.write(panorama.get_output_img().astype(np.uint8))
     main_time = time.time()-t
     print(1/(main_time+left_time+right_time), 1/main_time)
 

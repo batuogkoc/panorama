@@ -59,7 +59,7 @@ class ImageAppend:
         from_pts = this._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
         this.append(img, from_pts, to_pts_abs)
 
-    def append(this, img, from_pts, to_pts):
+    def append(this, img, from_pts, to_pts, mask=True):
         from_pts = from_pts.T
         corner_pixel_values = to_pts.T
 
@@ -105,6 +105,20 @@ class ImageAppend:
             #project the image only if the pixel values arent the same. the coordinate space is the same as old_img_new_index
             perspective_matrix = cv2.getPerspectiveTransform(from_pts, to_pts)
             new_img_new_index = cv2.warpPerspective(img, perspective_matrix, (new_width,new_height))
+            if mask:
+                mask = np.zeros((list(np.shape(new_img_new_index)[0:2]) + [1]), dtype=np.uint8)
+                poly_pts = np.copy(to_pts).astype(np.int32)
+                poly_pts[2:4] = poly_pts[3:1:-1]
+                print(poly_pts, "a")
+                x_0 = poly_pts[0][0]
+                y_0 = poly_pts[0][1]
+                x_1 = poly_pts[1][0]
+                y_1 = poly_pts[1][1]
+                # if
+                poly_pts = np.vstack((poly_pts[0], [poly_pts[0][0],  poly_pts[1][1]], poly_pts[1:]))
+                print(poly_pts)
+                cv2.fillPoly(mask, np.int32([poly_pts]), (255))
+                new_img_new_index = cv2.bitwise_and(new_img_new_index, new_img_new_index, mask=mask)    
         else:
             new_img_new_index = np.zeros((new_height, new_width, this.depth)).astype(np.float32)
 
