@@ -101,6 +101,7 @@ def geometry_msgs_TransformStamped_to_htm(transform_stamped):
     return ts.concatenate_matrices(ts.translation_matrix(trans), ts.quaternion_matrix(rot))
     
 def left_camera_callback(data):
+    t = rospy.Time.now()
     global left_camera_data
     global left_camera_transform
     global tf_buffer
@@ -109,6 +110,7 @@ def left_camera_callback(data):
         left_camera_data = deepcopy(data)
     except:
         rospy.logerr("couldn't get left_camera tf")
+    print(((left_camera_transform.header.stamp-t).nsecs/10**9), "left")
 
 def right_camera_callback(data):
     global right_camera_data
@@ -152,7 +154,7 @@ def main_camera_callback(data):
     map_tranform_htm_only_z_rot[2,0:2] = np.array([0,0])
 
     map_tranform_htm_only_z_rot_inv = ts.inverse_matrix(map_tranform_htm_only_z_rot)
-    print(map_tranform_htm_only_z_rot)
+    # print(map_tranform_htm_only_z_rot)
     # main_camera_htm_inv = ts.inverse_matrix(main_camera_htm)
     # main_to_left_htm = np.matmul(main_camera_htm_inv, left_camera_htm)
     # main_to_right_htm = np.matmul(main_camera_htm_inv, right_camera_htm)
@@ -162,15 +164,12 @@ def main_camera_callback(data):
     left_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, left_camera_htm)
 
     pos,rot = htm_to_pos_rot(main_local_htm)
-    print(pos, rot)
     panorama.update_camera_pos_rot("main_camera", pos, rot)
 
     pos, rot= htm_to_pos_rot(left_local_htm)
-    print(pos, rot)
     panorama.update_camera_pos_rot("left_camera", pos, rot)
 
     pos,rot = htm_to_pos_rot(right_local_htm)
-    print(pos, rot)
     panorama.update_camera_pos_rot("right_camera", pos, rot)
 
 
@@ -222,7 +221,7 @@ def main_camera_callback(data):
 
     out.write(resized_img)
     main_time = time.time()-t
-    print(1/(main_time+left_time+right_time), 1/main_time)
+    # print(1/(main_time+left_time+right_time), 1/main_time)
 
 def node():
     global main_camera_transform
