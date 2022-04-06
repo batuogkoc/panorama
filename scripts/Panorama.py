@@ -2,10 +2,70 @@ import ImageAppend
 import cv2
 import numpy as np
 import math as m
+import rospy
 
 import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
+
+class Camera():
+    def __init__(self, width, height, fov, image_array_size, frame_id, fov_vertical=True, depth=3):
+        self.width = width
+        self.width_low = 0
+        self.width_high = width
+
+        self.height = height
+        self.height_low = 0
+        self.height_high = height
+
+        self.depth = depth
+        if fov_vertical:
+            self.horizontal_fov = _vertical_to_horizontal_fov(width, height, fov)
+        else:
+            self.horizontal_fov = fov
+        
+        self.image_array = [[] for i in range(image_array_size)]
+        self.image_array_size = image_array_size
+        self.image_array_index = 0
+    
+    @staticmethod
+    def _vertical_to_horizontal_fov(width, height, vertical_fov):
+        f = (height/2)*m.tan(vertical_fov)
+        return 2*m.atan(width/2/f)
+
+    def set_orthogonal_roi(self, width_low, width_high, height_low, height_high):
+        assert 0<=width_low<width_high<=self.width, "incorrect width constraints"
+        assert 0<=height_low<height_high<=self.height, "incorrect height constraints"
+
+        self.width_high = width_high
+        self.width_low = width_low
+        self.height_high = height_high
+        self.height_low = height_low
+
+    def calculate_roi_corner_pts(self):
+        focal_len = self.width/2/m.tan(self.horizontal_fov/2)
+        image_y = np.array([self.height_low, self.height_high]).T
+        image_x = np.array([self.width_low, self.width_high]).T
+
+        camera_frame_z = -image_y + self.height/2
+        camera_frame_y = -image_x + self.width/2
+        return np.vstack([focal_len*np.ones((4)), Panorama._cartesian_cross_product(camera_frame_y.T, camera_frame_z.T).T])
+
+    def add_image_stamped(self, image):
+        t = rospy.Time.now()
+        self.image_array_index = (self.image_array_index + 1)%self.image_array_size
+        self.image_array[self.image_array_index] = [t, image]
+    
+    def get_image_stamped(self, offset=0):
+        return self.image_array[self.image_array_index+offset]
+
+    def get_image_with_closest_stamp(self, time):
+        closest = self.image_array[self.image_array_index]
+        for i in range(self.image_array_size):
+            current=self.image_array[self.image_array_index-i]
+            if current[0]-time < closest[0]-time:
+                closest = current
+        return closest
 
 class Panorama():
     """
