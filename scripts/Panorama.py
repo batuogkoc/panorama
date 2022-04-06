@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 
-
 class Panorama():
     """
     Class for multi camera panaromic pictures
@@ -29,16 +28,23 @@ class Panorama():
         # y = np.array([height/2, -(height/2)]).T
         y = np.array([-height/6, -(height/2)]).T
         x = np.array([-width/2, width/2]).T
-        print(x, y)
         return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
+
+    # @staticmethod
+    # def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
+    #     # y = np.array([height/2, -(height/2)]).T
+    #     y = np.array([(height/2-height_low), (height/2-height_high)]).T
+    #     x = np.array([width_low-width/2, width_high-width/2]).T
+    #     return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
 
     @staticmethod
     def _calculateCamImgInitialPos_with_ROI(width, width_low, width_high, height, height_low, height_high, focal_len):
-        # y = np.array([height/2, -(height/2)]).T
-        y = np.array([(height/2-height_low), (height/2-height_high)]).T
-        x = np.array([width_low-width/2, width_high-width/2]).T
-        print(x, y)
-        return np.vstack([Panorama._cartesian_cross_product(x, y).T, -focal_len*np.ones((4))])
+        image_y = np.array([height_low, height_high]).T
+        image_x = np.array([width_low, width_high]).T
+
+        camera_frame_z = -image_y + height/2
+        camera_frame_y = -image_x + width/2
+        return np.vstack([focal_len*np.ones((4)), Panorama._cartesian_cross_product(camera_frame_y.T, camera_frame_z.T).T])
 
 
     @staticmethod
@@ -86,34 +92,10 @@ class Panorama():
         """
         del(self.cameras[camera_name])
 
-    def update_camera_img_a(self, camera_name, camera_img):
-        """Project the newly recieved image for the camera in question
-
-        Args:
-            camera_name (string): name of the camera that will be projected
-            camera_img (cv2.mat): opencv image matrix representing the image from the camera
-        """
-        cam_pos = self.cameras[camera_name]["pos"]
-        cam_rotation = self.cameras[camera_name]["rot"]
-        corner_pts_start = self.cameras[camera_name]["corner_pts_start"]
-        # print(corner_pts_start)
-        corner_pts = np.matmul(cam_rotation, corner_pts_start) + cam_pos
-
-        projected_points = Panorama._project_points(corner_pts, cam_pos)
-
-        # t_projected_points = np.vstack((projected_points, np.zeros((1,4))))
-        # print(t_projected_points)
-        # # plot_pts = np.hstack((np.hstack((corner_pts, cam_pos)), t_projected_points))
-        # plot_pts = np.hstack((t_projected_points, cam_pos))
-        # # print(plot_pts)
-        
-        # fig = plt.figure(figsize=(4,4))
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.scatter(plot_pts[0], plot_pts[1], plot_pts[2])
-        # plt.show()
-        
-        self.image_append.project(camera_img, projected_points)
-
+    def update_camera_pos_rot(self, camera_name, camera_pos, camera_rot):
+        self.cameras[camera_name]["pos"] = camera_pos
+        self.cameras[camera_name]["rot"] = camera_rot
+    
     def update_camera_img(self, camera_name, camera_img):
         camera_pos = self.cameras[camera_name]["pos"]
         camera_rot = self.cameras[camera_name]["rot"]
@@ -128,10 +110,9 @@ class Panorama():
         x_max = np.max(from_pts[:][0])
         y_min = np.min(from_pts[:][1])
         y_max = np.max(from_pts[:][1])
+        
         corner_pts_start = self._calculateCamImgInitialPos_with_ROI(width, x_min, x_max, height, y_min, y_max, self._focal_length(width, horizontal_fov))
-        print(corner_pts_start)
         # corner_pts_start = self._calculateCamImgInitialPos(width, height, horizontal_fov)
-        print(corner_pts_start)
 
         corner_pts = np.matmul(camera_rot, corner_pts_start) + camera_pos
 
