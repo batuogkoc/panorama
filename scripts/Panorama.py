@@ -4,9 +4,8 @@ import numpy as np
 import math as m
 import rospy
 
-import matplotlib.pyplot as plt
-
-from mpl_toolkits.mplot3d import Axes3D
+from utils import *
+# from copy import deepcopy
 
 class Camera():
     def __init__(self, width, height, fov, image_array_size, frame_id, fov_vertical=True, depth=3):
@@ -20,18 +19,20 @@ class Camera():
 
         self.depth = depth
         if fov_vertical:
-            self.horizontal_fov = _vertical_to_horizontal_fov(width, height, fov)
+            self.horizontal_fov = vertical_to_horizontal_fov(width, height, fov)
         else:
             self.horizontal_fov = fov
         
         self.image_array = [[] for i in range(image_array_size)]
         self.image_array_size = image_array_size
-        self.image_array_index = 0
+        self.image_array_index = -1
+
+        self.frame_id = frame_id
+
+        self.htm = np.identity(4)
+        self.htm_stamp = rospy.Time.now()
     
-    @staticmethod
-    def _vertical_to_horizontal_fov(width, height, vertical_fov):
-        f = (height/2)*m.tan(vertical_fov)
-        return 2*m.atan(width/2/f)
+
 
     def set_orthogonal_roi(self, width_low, width_high, height_low, height_high):
         assert 0<=width_low<width_high<=self.width, "incorrect width constraints"
@@ -49,25 +50,56 @@ class Camera():
 
         camera_frame_z = -image_y + self.height/2
         camera_frame_y = -image_x + self.width/2
-        return np.vstack([focal_len*np.ones((4)), Panorama._cartesian_cross_product(camera_frame_y.T, camera_frame_z.T).T])
+        return np.vstack([focal_len*np.ones((4)), cartesian_cross_product(camera_frame_y.T, camera_frame_z.T).T])
+
+    def calculate_roi_corner_pts_pixel(self):
+        return cartesian_cross_product([self.width_low, self.width_high], [self.height_low,self.height_high]).astype(np.float32).T
 
     def add_image_stamped(self, image):
         t = rospy.Time.now()
         self.image_array_index = (self.image_array_index + 1)%self.image_array_size
         self.image_array[self.image_array_index] = [t, image]
+
+    def add_image_stamped(self, stamp, image):
+        self.image_array_index = (self.image_array_index + 1)%self.image_array_size
+        self.image_array[self.image_array_index] = [stamp, image]
     
     def get_image_stamped(self, offset=0):
         return self.image_array[self.image_array_index+offset]
 
-    def get_image_with_closest_stamp(self, time):
+    # def get_image_with_closest_stamp(self, time):
+    #     closest = self.image_array[self.image_array_index]
+    #     for i in range(self.image_array_size):
+    #         current=self.image_array[self.image_array_index-i]
+    #         if current[0]-time < closest[0]-time:
+    #             closest = current
+    #     return np.copy(closest)
+    
+    def get_image_with_closest_stamp_to_htm(self):
         closest = self.image_array[self.image_array_index]
+        closest_offset = 0
         for i in range(self.image_array_size):
             current=self.image_array[self.image_array_index-i]
-            if current[0]-time < closest[0]-time:
-                closest = current
-        return closest
+            try:
+                if abs(duration_to_sec(current[0]-self.htm_stamp)) < abs(duration_to_sec(closest[0]-self.htm_stamp)):
+                    closest = current
+            except IndexError:
+                continue
+        return np.copy(closest[1])
 
-class Panorama():
+    def set_htm(self, htm, htm_stamp):
+        self.htm = htm
+        self.htm_stamp = htm_stamp
+    
+    # def set_htm(self, geometry_msgs_TransformStamped):
+    #     self.htm = geometry_msgs_TransformStamped_to_htm(geometry_msgs_TransformStamped)
+    #     self.htm_stamp = geometry_msgs_TransformStamped.header.stamp
+
+    def get_htm(self):
+        return self.htm
+
+
+class Panorama_a():
     """
     Class for multi camera panaromic pictures
     Projects images to z=0 plane
@@ -234,3 +266,37 @@ if __name__ == "__main__":
     cv2.imwrite("img.jpg", panorama.get_output_img())
 
 
+class Panorama():
+    def __init__(self, step=0.01):
+        self.image_append = ImageAppend.ImageAppend(0, 0, step=step)
+        self.cameras = {}
+    
+    def add_camera(self, camera):
+        frame_id = camera.frame_id
+        self.cameras[frame_id] = camera
+
+    def remove_camera(self, camera_frame_id):
+        del(self.cameras[camera_name])
+
+    def project_camera(self, camera_frame_id):
+        camera = self.cameras[camera_frame_id]
+        roi_corner_pts = camera.calculate_roi_corner_pts()
+        from_pts = camera.calculate_roi_corner_pts_pixel()
+
+        roi_corner_pts_transformed = np.matmul(camera.htm, np.vstack((roi_corner_pts, np.ones(np.shape(roi_corner_pts)[1]))))[0:3]
+
+        camera_pos, camera_rot = htm_to_pos_rot(camera.htm)
+        roi_corner_pts_projected = project_points(roi_corner_pts_transformed, camera_pos)
+        
+        to_pts = self.image_append.local_meter_to_local_pixel_coords(roi_corner_pts_projected)
+        self.image_append.append(camera.get_image_with_closest_stamp_to_htm(), from_pts, to_pts)
+    
+    def project_all_cameras(self):
+        for camera_frame_id in self.cameras.keys():
+            self.project_camera(camera_frame_id)
+    
+    def get_output_img(self):
+        return self.image_append.image
+
+    def clear_img(self):
+        self.image_append.clear_img()
