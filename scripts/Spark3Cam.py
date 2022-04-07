@@ -159,7 +159,7 @@ def node():
     rospy.Subscriber("left_camera/image/compressed", CompressedImage, left_camera_callback)
     rospy.Subscriber("right_camera/image/compressed", CompressedImage, right_camera_callback)
 
-    panorama = Panorama.Panorama(0.01)
+    panorama = Panorama.Panorama(0.03)
 
     get_tf = True
     while get_tf:
@@ -180,13 +180,13 @@ def node():
 
             # pos,rot = geometry_msgs_TransformStamped_to_pos_rot(right_camera_transform)
             # panorama.add_camera("right_camera", pos, rot, 1920, 1080, l_r_fov)
-
+            a = 0.66
             left_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, "left_camera")
-            left_camera.set_orthogonal_roi(0, left_camera.width, int(left_camera.height*(2/3)), left_camera.height)
+            left_camera.set_orthogonal_roi(0, left_camera.width, int(left_camera.height*(a)), left_camera.height)
             right_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, "right_camera")
-            right_camera.set_orthogonal_roi(0, right_camera.width, int(right_camera.height*(2/3)), right_camera.height)
+            right_camera.set_orthogonal_roi(0, right_camera.width, int(right_camera.height*(a)), right_camera.height)
             main_camera = Panorama.Camera(1250, 1080, m.pi*60/180, 30, "main_camera")
-            main_camera.set_orthogonal_roi(0, main_camera.width, int(main_camera.height*(2/3)), main_camera.height)
+            main_camera.set_orthogonal_roi(0, main_camera.width, int(main_camera.height*(a)), main_camera.height)
 
 
             panorama.add_camera(left_camera)
