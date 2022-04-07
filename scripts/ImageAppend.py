@@ -2,6 +2,7 @@
 import cv2
 import numpy as np
 import math as m
+from utils import *
 
 class ImageAppend:
     def __init__(self, width, height, step = 0.2, depth = 3):
@@ -12,26 +13,12 @@ class ImageAppend:
         self.map_corner_coords = np.array([[0, 0]], dtype=np.int)  #coordinates of where the map top left corner is in local pixel coordinate frame
         self.image = np.zeros((height, width, depth))
 
-    @staticmethod
-    def _cartesian_cross_product(x,y):
-        cross_product = np.transpose([np.tile(x, len(y)),np.repeat(y,len(x))])
-        return cross_product
-
     def updateImage(self, new_img):
         (img_height, img_width, img_depth) = np.shape(new_img)
         self.width = img_width
         self.height = img_height
         self.depth = img_depth
         self.image = new_img
-
-    # def local_meter_to_local_pixel_coords(self, local_meter_coords):
-    #     local_meter_coords_temp = np.copy(local_meter_coords)
-
-    #     local_meter_coords_temp[1] = -local_meter_coords_temp[1]
-
-    #     local_pixel_coords = local_meter_coords_temp/self.step
-
-    #     return local_pixel_coords.astype(np.float32)
 
     def local_meter_to_local_pixel_coords(self, local_meter_coords):
         assert np.shape(local_meter_coords)[0] == 2 or np.shape(local_meter_coords)[0] == 3, "invalid local_meter_coords shape, expected 2xn or 3xn"
@@ -59,7 +46,7 @@ class ImageAppend:
     def project(self, img, projected_points):
         (img_height, img_width, _) = np.shape(img)
         to_pts_abs = self.local_meter_to_local_pixel_coords(projected_points)
-        from_pts = self._cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
+        from_pts = cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
         self.append(img, from_pts, to_pts_abs)
 
     def append(self, img, from_pts, to_pts, mask=True, extend_mask=True):
@@ -107,7 +94,8 @@ class ImageAppend:
         if not x_max_img == x_min_img and not y_max_img == y_min_img:
             #project the image only if the pixel values arent the same. the coordinate space is the same as old_img_new_index
             perspective_matrix = cv2.getPerspectiveTransform(from_pts, to_pts)
-            new_img_new_index = cv2.warpPerspective(img, perspective_matrix, (new_width,new_height))
+            new_img_new_index = cv2.warpPerspective(img, perspective_matrix, (new_width,new_height), flags=cv2.INTER_CUBIC)
+
             if mask:
                 mask = np.zeros((list(np.shape(new_img_new_index)[0:2]) + [1]), dtype=np.uint8)
                 poly_pts = np.copy(to_pts).astype(np.int32)
@@ -134,16 +122,13 @@ class ImageAppend:
                 new_img_new_index = cv2.bitwise_and(new_img_new_index, new_img_new_index, mask=mask)    
         else:
             new_img_new_index = np.zeros((new_height, new_width, self.depth)).astype(np.float32)
-
         #create a mask to black out the region where the new image will fit in the old image
         new_img_new_index_gray = cv2.cvtColor(new_img_new_index, cv2.COLOR_BGR2GRAY)
         ret, mask = cv2.threshold(new_img_new_index_gray, 1, 255, cv2.THRESH_BINARY)
         mask_inv = cv2.bitwise_not(mask.astype(np.uint8))
-
         #black out area where the new image will fit in the old image
         old_img_new_index = cv2.bitwise_and(old_img_new_index, old_img_new_index, mask=mask_inv.astype(np.uint8))
 
         #stitch images
         ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
-
         self.updateImage(ret)
