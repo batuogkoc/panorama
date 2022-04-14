@@ -143,9 +143,9 @@ def main():
     # left_local_htm = left_camera_htm
     # right_local_htm = right_camera_htm
 
-    panorama.cameras["left_camera"].set_htm(left_local_htm, left_camera_transform.header.stamp)
-    panorama.cameras["right_camera"].set_htm(right_local_htm, right_camera_transform.header.stamp)
-    panorama.cameras["main_camera"].set_htm(main_local_htm, main_camera_transform.header.stamp)
+    panorama.cameras["left_camera"].add_htm(left_local_htm, left_camera_transform.header.stamp)
+    panorama.cameras["right_camera"].add_htm(right_local_htm, right_camera_transform.header.stamp)
+    panorama.cameras["main_camera"].add_htm(main_local_htm, main_camera_transform.header.stamp)
 
     times.add("htm")
     panorama.clear_img()
@@ -156,7 +156,6 @@ def main():
 
     resized_img = imshow_r("a", frame, (1600, 900))
     cv2.waitKey(1)
-    global first_time
 
     # out.write(resized_img)
     times.add("imshow")
