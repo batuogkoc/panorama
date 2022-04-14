@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import math as m
 import rospy
+from collections import deque
 
 from utils import *
 # from copy import deepcopy
@@ -29,8 +30,7 @@ class Camera():
 
         self.frame_id = frame_id
 
-        self.htm = np.identity(4)
-        self.htm_stamp = rospy.Time.now()
+        self.htm_deque = deque(maxlen=10)
     
 
 
@@ -78,25 +78,25 @@ class Camera():
     def get_image_with_closest_stamp_to_htm(self):
         closest = self.image_array[self.image_array_index]
         closest_offset = 0
+        last_htm_stamp = self.htm_deque[-1][0]
         for i in range(self.image_array_size):
             current=self.image_array[self.image_array_index-i]
             try:
-                if abs(duration_to_sec(current[0]-self.htm_stamp)) < abs(duration_to_sec(closest[0]-self.htm_stamp)):
+                if abs(duration_to_sec(current[0]-last_htm_stamp)) < abs(duration_to_sec(closest[0]-last_htm_stamp)):
                     closest = current
             except IndexError:
                 continue
         return np.copy(closest[1])
 
     def set_htm(self, htm, htm_stamp):
-        self.htm = htm
-        self.htm_stamp = htm_stamp
+        self.htm_deque.append((htm_stamp, htm))
     
     # def set_htm(self, geometry_msgs_TransformStamped):
     #     self.htm = geometry_msgs_TransformStamped_to_htm(geometry_msgs_TransformStamped)
     #     self.htm_stamp = geometry_msgs_TransformStamped.header.stamp
 
     def get_htm(self):
-        return self.htm
+        return self.htm_deque[-1][1]
 
 
 class Panorama_a():
@@ -283,9 +283,9 @@ class Panorama():
         roi_corner_pts = camera.calculate_roi_corner_pts()
         from_pts = camera.calculate_roi_corner_pts_pixel()
 
-        roi_corner_pts_transformed = np.matmul(camera.htm, np.vstack((roi_corner_pts, np.ones(np.shape(roi_corner_pts)[1]))))[0:3]
+        roi_corner_pts_transformed = np.matmul(camera.get_htm(), np.vstack((roi_corner_pts, np.ones(np.shape(roi_corner_pts)[1]))))[0:3]
 
-        camera_pos, camera_rot = htm_to_pos_rot(camera.htm)
+        camera_pos, camera_rot = htm_to_pos_rot(camera.get_htm())
         roi_corner_pts_projected = project_points(roi_corner_pts_transformed, camera_pos)
         
         to_pts = self.image_append.local_meter_to_local_pixel_coords(roi_corner_pts_projected)
