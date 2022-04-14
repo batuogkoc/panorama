@@ -113,6 +113,7 @@ def main():
     global main_camera_transform
     global left_camera_transform
     global right_camera_transform
+
     left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
     right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
     main_camera_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform)
@@ -145,15 +146,15 @@ def main():
     panorama.cameras["left_camera"].set_htm(left_local_htm, left_camera_transform.header.stamp)
     panorama.cameras["right_camera"].set_htm(right_local_htm, right_camera_transform.header.stamp)
     panorama.cameras["main_camera"].set_htm(main_local_htm, main_camera_transform.header.stamp)
+
     times.add("htm")
     panorama.clear_img()
-    panorama.project_all_cameras()
-    # panorama.project_camera("main_camera")
-    frame = deepcopy(panorama.get_output_img())
+    # panorama.project_all_cameras()
+    panorama.project_camera("main_camera")
+    frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3))
     times.add("project")
 
-    # resized_img = imshow_r("a", frame, (1920, 1080))
-    cv2.imshow("frame", panorama.cameras["main_camera"].get_image_with_closest_stamp_to_htm())
+    resized_img = imshow_r("a", frame, (1600, 900))
     cv2.waitKey(1)
     global first_time
 
