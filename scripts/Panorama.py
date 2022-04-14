@@ -24,13 +24,11 @@ class Camera():
         else:
             self.horizontal_fov = fov
         
-        self.image_array = [[] for i in range(image_array_size)]
-        self.image_array_size = image_array_size
-        self.image_array_index = -1
+        self.__image_deque = deque(maxlen=image_array_size)
 
         self.frame_id = frame_id
 
-        self.htm_deque = deque(maxlen=10)
+        self.__htm_deque = deque(maxlen=10)
     
 
 
@@ -57,15 +55,13 @@ class Camera():
 
     def add_image_stamped(self, image):
         t = rospy.Time.now()
-        self.image_array_index = (self.image_array_index + 1)%self.image_array_size
-        self.image_array[self.image_array_index] = [t, image]
+        self.__image_deque.append((t, image))
 
     def add_image_stamped(self, stamp, image):
-        self.image_array_index = (self.image_array_index + 1)%self.image_array_size
-        self.image_array[self.image_array_index] = [stamp, image]
+        self.__image_deque.append((stamp, image))
     
-    def get_image_stamped(self, offset=0):
-        return self.image_array[self.image_array_index+offset]
+    def get_image_stamped(self, offset=-1):
+        return self.__image_deque[offset]
 
     # def get_image_with_closest_stamp(self, time):
     #     closest = self.image_array[self.image_array_index]
@@ -76,27 +72,25 @@ class Camera():
     #     return np.copy(closest)
     
     def get_image_with_closest_stamp_to_htm(self):
-        closest = self.image_array[self.image_array_index]
-        closest_offset = 0
-        last_htm_stamp = self.htm_deque[-1][0]
-        for i in range(self.image_array_size):
-            current=self.image_array[self.image_array_index-i]
-            try:
-                if abs(duration_to_sec(current[0]-last_htm_stamp)) < abs(duration_to_sec(closest[0]-last_htm_stamp)):
-                    closest = current
-            except IndexError:
-                continue
+        closest = self.__image_deque[-1]
+        last_htm_stamp = self.__htm_deque[-1][0]
+        for current in self.__image_deque:
+            if abs(duration_to_sec(current[0]-last_htm_stamp)) < abs(duration_to_sec(closest[0]-last_htm_stamp)):
+                closest = current
         return np.copy(closest[1])
 
-    def set_htm(self, htm, htm_stamp):
-        self.htm_deque.append((htm_stamp, htm))
+    def add_htm(self, htm, htm_stamp):
+        self.__htm_deque.append((htm_stamp, htm))
     
     # def set_htm(self, geometry_msgs_TransformStamped):
     #     self.htm = geometry_msgs_TransformStamped_to_htm(geometry_msgs_TransformStamped)
     #     self.htm_stamp = geometry_msgs_TransformStamped.header.stamp
 
-    def get_htm(self):
-        return self.htm_deque[-1][1]
+    def get_htm(self, offset=-1, get_stamp=False):
+        if get_stamp:
+            return self.__htm_deque[-1]
+        else:
+            return self.__htm_deque[offset][1]
 
 
 class Panorama_a():
