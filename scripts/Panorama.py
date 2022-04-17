@@ -6,10 +6,10 @@ import rospy
 from collections import deque
 
 from utils import *
-# from copy import deepcopy
+from copy import deepcopy
 
 class Camera():
-    def __init__(self, width, height, fov, image_array_size, frame_id, fov_vertical=True, depth=3):
+    def __init__(self, width, height, fov, image_deque_size, htm_deque_size ,frame_id, fov_vertical=True, depth=3):
         self.width = width
         self.width_low = 0
         self.width_high = width
@@ -24,11 +24,11 @@ class Camera():
         else:
             self.horizontal_fov = fov
         
-        self.__image_deque = deque(maxlen=image_array_size)
+        self.__image_deque = deque(maxlen=image_deque_size)
 
         self.frame_id = frame_id
 
-        self.__htm_deque = deque(maxlen=10)
+        self.__htm_deque = deque(maxlen=htm_deque_size)
     
 
 
@@ -71,26 +71,43 @@ class Camera():
     #             closest = current
     #     return np.copy(closest)
     
-    def get_image_with_closest_stamp_to_htm(self):
+    def get_image_with_closest_stamp_to_htm(self, return_stamped=False):
         closest = self.__image_deque[-1]
         last_htm_stamp = self.__htm_deque[-1][0]
         for current in self.__image_deque:
             if abs(duration_to_sec(current[0]-last_htm_stamp)) < abs(duration_to_sec(closest[0]-last_htm_stamp)):
                 closest = current
-        return np.copy(closest[1])
+        if return_stamped:
+            return closest
+        else:
+            return closest[1]
 
     def add_htm(self, htm, htm_stamp):
-        self.__htm_deque.append((htm_stamp, htm))
+        if not (htm_stamp, htm) in self.__htm_deque:
+            self.__htm_deque.append((htm_stamp, htm))
     
     # def set_htm(self, geometry_msgs_TransformStamped):
     #     self.htm = geometry_msgs_TransformStamped_to_htm(geometry_msgs_TransformStamped)
     #     self.htm_stamp = geometry_msgs_TransformStamped.header.stamp
 
-    def get_htm(self, offset=-1, get_stamp=False):
-        if get_stamp:
-            return self.__htm_deque[-1]
+    def get_htm(self, offset=-1, return_stamped=False):
+        if return_stamped:
+            return self.__htm_deque[offset]
         else:
             return self.__htm_deque[offset][1]
+
+    def get_extrapolated_htm(self, stamp, return_stamped = False):
+        indexes = np.argsort([abs(duration_to_sec(stamp-htm_stamped[0])) for htm_stamped in self.__htm_deque])
+        for i in indexes:
+            print(duration_to_sec(self.__htm_deque[i][0]-self.__htm_deque[indexes[-1]][0]))
+        htm1_stamped = self.__htm_deque[indexes[0]]
+        htm2_stamped = self.__htm_deque[indexes[1]]
+        print(htm1_stamped[1]-htm2_stamped[1])
+        htm = (stamp, extrapolate_htm(htm1_stamped[0], htm1_stamped[1], htm2_stamped[0], htm2_stamped[1], stamp))
+        if return_stamped:
+            return htm
+        else:
+            return htm[1]
 
 
 class Panorama_a():
@@ -272,22 +289,29 @@ class Panorama():
     def remove_camera(self, camera_frame_id):
         del(self.cameras[camera_name])
 
-    def project_camera(self, camera_frame_id):
+    def project_camera(self, camera_frame_id, extrapolate_htm=False):
         camera = self.cameras[camera_frame_id]
         roi_corner_pts = camera.calculate_roi_corner_pts()
         from_pts = camera.calculate_roi_corner_pts_pixel()
 
-        roi_corner_pts_transformed = np.matmul(camera.get_htm(), np.vstack((roi_corner_pts, np.ones(np.shape(roi_corner_pts)[1]))))[0:3]
+        image_stamp, image = camera.get_image_with_closest_stamp_to_htm(return_stamped=True)
+
+        if extrapolate_htm:
+            camera_htm = camera.get_extrapolated_htm(image_stamp)
+        else:
+            camera_htm = camera.get_htm()
+
+        roi_corner_pts_transformed = np.matmul(camera_htm, np.vstack((roi_corner_pts, np.ones(np.shape(roi_corner_pts)[1]))))[0:3]
 
         camera_pos, camera_rot = htm_to_pos_rot(camera.get_htm())
         roi_corner_pts_projected = project_points(roi_corner_pts_transformed, camera_pos)
         
         to_pts = self.image_append.local_meter_to_local_pixel_coords(roi_corner_pts_projected)
-        self.image_append.append(camera.get_image_with_closest_stamp_to_htm(), from_pts, to_pts)
+        self.image_append.append(image, from_pts, to_pts)
     
-    def project_all_cameras(self):
+    def project_all_cameras(self, extrapolate_htm=False):
         for camera_frame_id in self.cameras.keys():
-            self.project_camera(camera_frame_id)
+            self.project_camera(camera_frame_id, extrapolate_htm=extrapolate_htm)
     
     def get_output_img(self):
         return self.image_append.image
