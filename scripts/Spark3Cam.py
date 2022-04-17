@@ -149,8 +149,8 @@ def main():
 
     times.add("htm")
     panorama.clear_img()
-    # panorama.project_all_cameras()
-    panorama.project_camera("main_camera")
+    panorama.project_all_cameras(extrapolate_htm=True)
+    # panorama.project_camera("main_camera")
     frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3))
     times.add("project")
 
@@ -192,11 +192,11 @@ def node():
             right_camera_transform = tf_buffer.lookup_transform("map", "right_camera", rospy.Time(0), rospy.Duration(1.0))
             
             a = 0.6
-            left_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, "left_camera")
+            left_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "left_camera")
             left_camera.set_orthogonal_roi(0, left_camera.width, int(left_camera.height*(a)), left_camera.height)
-            right_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, "right_camera")
+            right_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "right_camera")
             right_camera.set_orthogonal_roi(0, right_camera.width, int(right_camera.height*(a)), right_camera.height)
-            main_camera = Panorama.Camera(1250, 1080, m.pi*60/180, 30, "main_camera")
+            main_camera = Panorama.Camera(1250, 1080, m.pi*60/180, 30, 30, "main_camera")
             main_camera.set_orthogonal_roi(0, main_camera.width, int(main_camera.height*(a)), main_camera.height)
 
 

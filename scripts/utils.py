@@ -77,6 +77,9 @@ def htm_to_pos_rot(htm):
     rot = htm[0:3,0:3]
     return pos, rot
 
+def pos_rot_to_htm(pos, rot):
+    return np.vstack((np.hstack((rot, pos)), np.array([0, 0, 0, 1])))
+
 def geometry_msgs_TransformStamped_to_htm(transform_stamped):
     trans = transform_stamped.transform.translation
     rot = transform_stamped.transform.rotation
@@ -129,3 +132,77 @@ class Times():
             ret += "{:s}: {:.2f}%\n".format(self.times[i][0], duration_to_sec(self.times[i][1]-self.times[i-1][1])/dt*100)
         ret += "Total: {:.2f}, {:.2f} hz\n".format(dt, 1/dt)
         return ret
+
+# Calculates Rotation Matrix given euler angles.
+def eulerAnglesToRotationMatrix(theta) :
+
+    R_x = np.array([[1,         0,                  0                   ],
+                    [0,         m.cos(theta[0]), -m.sin(theta[0]) ],
+                    [0,         m.sin(theta[0]), m.cos(theta[0])  ]
+                    ])
+
+    R_y = np.array([[m.cos(theta[1]),    0,      m.sin(theta[1])  ],
+                    [0,                     1,      0                   ],
+                    [-m.sin(theta[1]),   0,      m.cos(theta[1])  ]
+                    ])
+
+    R_z = np.array([[m.cos(theta[2]),    -m.sin(theta[2]),    0],
+                    [m.sin(theta[2]),    m.cos(theta[2]),     0],
+                    [0,                     0,                      1]
+                    ])
+
+    R = np.dot(R_z, np.dot( R_y, R_x ))
+
+    return R
+
+# Checks if a matrix is a valid rotation matrix.
+def isRotationMatrix(R) :
+    Rt = np.transpose(R)
+    shouldBeIdentity = np.dot(Rt, R)
+    I = np.identity(3, dtype = R.dtype)
+    n = np.linalg.norm(I - shouldBeIdentity)
+    return n < 1e-4
+
+# Calculates rotation matrix to euler angles
+# The result is the same as MATLAB except the order
+# of the euler angles ( x and z are swapped ).
+def rotationMatrixToEulerAngles(R) :
+
+    assert(isRotationMatrix(R))
+
+    sy = m.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+
+    singular = sy < 1e-6
+
+    if  not singular :
+        x = m.atan2(R[2,1] , R[2,2])
+        y = m.atan2(-R[2,0], sy)
+        z = m.atan2(R[1,0], R[0,0])
+    else :
+        x = m.atan2(-R[1,2], R[1,1])
+        y = m.atan2(-R[2,0], sy)
+        z = 0
+
+    return np.array([x, y, z])
+
+
+def extrapolate_htm(stamp1, htm1, stamp2, htm2, target_stamp):
+    pos1, rot1 = htm_to_pos_rot(htm1)
+    pos2, rot2 = htm_to_pos_rot(htm2)
+
+    stamp1_to_target = duration_to_sec(target_stamp-stamp1)
+    stamp1_to_stamp2 = duration_to_sec(stamp2-stamp1)
+    print(stamp1_to_target/stamp1_to_stamp2, stamp1_to_target)
+    velocity = (pos2-pos1)/stamp1_to_stamp2
+    rotation = np.matmul(rot2, np.linalg.inv(rot1))
+
+    angular_velocity = rotationMatrixToEulerAngles(rotation)*(stamp1_to_stamp2)
+
+    new_position = pos1 + velocity*stamp1_to_target
+    new_rotation = np.matmul(eulerAnglesToRotationMatrix(angular_velocity*stamp1_to_stamp2), rot1)
+
+    return pos_rot_to_htm(new_position, new_rotation)
+
+
+
+
