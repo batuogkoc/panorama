@@ -101,11 +101,6 @@ def main_camera_callback(data):
         panorama.cameras[frame_id].add_image_stamped(t, frame_masked)
     except Exception as e:
         rospy.logerr("couldn't get "+frame_id+" tf: "+ str(e))
-
-
-
-    main()
-
     
 
 def main():
@@ -113,10 +108,14 @@ def main():
     global main_camera_transform
     global left_camera_transform
     global right_camera_transform
-
-    left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
-    right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
-    main_camera_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform)
+    rospy.spin()
+    try:
+        left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
+        right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
+        main_camera_htm = geometry_msgs_TransformStamped_to_htm(main_camera_transform)
+    except AttributeError:
+        rospy.loginfo("waiting for tf")
+        return
     try:
         map_tranform = tf_buffer.lookup_transform(source, "map", rospy.Time(0), rospy.Duration(1.0))
         map_tranform_htm = geometry_msgs_TransformStamped_to_htm(map_tranform)
@@ -149,16 +148,22 @@ def main():
 
     times.add("htm")
     panorama.clear_img()
-    panorama.project_all_cameras(extrapolate_htm=True)
-    # panorama.project_camera("main_camera")
+    # panorama.project_all_cameras(extrapolate_htm=True)
+    panorama.project_camera("main_camera", extrapolate_htm=True)
     frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3))
     times.add("project")
 
+    right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+    for corner in right_handed_corners:
+        cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+    times.add("detect corners")
     resized_img = imshow_r("a", frame, (1600, 900))
     cv2.waitKey(1)
 
     # out.write(resized_img)
     times.add("imshow")
+    
+    times.add("spin")
     print(times)
     rate_control_string = std_msgs.msg.String()
     rate_control_string.data = "Done"
@@ -183,37 +188,27 @@ def node():
     rate_control_string.data = "Done"
     rate_control_publisher.publish(rate_control_string)
     panorama = Panorama.Panorama(0.03)
-
-    get_tf = True
-    while get_tf:
-        try:
-            main_camera_transform = tf_buffer.lookup_transform("map", "main_camera", rospy.Time(0), rospy.Duration(1.0))
-            left_camera_transform = tf_buffer.lookup_transform("map", "left_camera", rospy.Time(0), rospy.Duration(1.0))
-            right_camera_transform = tf_buffer.lookup_transform("map", "right_camera", rospy.Time(0), rospy.Duration(1.0))
-            
-            a = 0.6
-            left_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "left_camera")
-            left_camera.set_orthogonal_roi(0, left_camera.width, int(left_camera.height*(a)), left_camera.height)
-            right_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "right_camera")
-            right_camera.set_orthogonal_roi(0, right_camera.width, int(right_camera.height*(a)), right_camera.height)
-            main_camera = Panorama.Camera(1250, 1080, m.pi*60/180, 30, 30, "main_camera")
-            main_camera.set_orthogonal_roi(0, main_camera.width, int(main_camera.height*(a)), main_camera.height)
+    a = 0.58
+    left_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "left_camera")
+    left_camera.set_orthogonal_roi(0, left_camera.width, int(left_camera.height*(a)), left_camera.height)
+    right_camera = Panorama.Camera(1920, 1080, m.pi*60/180, 30, 30, "right_camera")
+    right_camera.set_orthogonal_roi(0, right_camera.width, int(right_camera.height*(a)), right_camera.height)
+    main_camera = Panorama.Camera(1250, 1080, m.pi*60/180, 30, 30, "main_camera")
+    main_camera.set_orthogonal_roi(0, main_camera.width, int(main_camera.height*(a)), main_camera.height)
 
 
-            panorama.add_camera(left_camera)
-            panorama.add_camera(right_camera)
-            panorama.add_camera(main_camera)
+    panorama.add_camera(left_camera)
+    panorama.add_camera(right_camera)
+    panorama.add_camera(main_camera)
 
-            get_tf = False
-        except Exception as e:
-            rospy.logerr(e)
-    rospy.spin()
-        
+    while True:
+        main()
+
 if __name__ == "__main__":
-    try:
-        node()
-    except Exception as e:
-        rospy.logerr(e)
-    finally:
-        rospy.loginfo("exiting")
-        out.release()
+    # try:
+    node()
+    # except Exception as e:
+    #     rospy.logerr(e)
+    # finally:
+    #     rospy.loginfo("exiting")
+    #     out.release()
