@@ -1,2 +1,5 @@
 /.vscode
-rosbag
+/rosbag
+*.png
+*.jpg
+*.avi

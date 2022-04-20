@@ -20,7 +20,7 @@ class ImageAppend:
         self.depth = img_depth
         self.image = new_img
 
-    def local_meter_to_local_pixel_coords(self, local_meter_coords):
+    def _local_meter_to_local_pixel_coords(self, local_meter_coords):
         assert np.shape(local_meter_coords)[0] == 2 or np.shape(local_meter_coords)[0] == 3, "invalid local_meter_coords shape, expected 2xn or 3xn"
         local_meter_coords_temp = np.copy(local_meter_coords)
         if np.shape(local_meter_coords)[0] == 3:
@@ -35,6 +35,22 @@ class ImageAppend:
         local_pixel_coords = local_meter_coords_temp/self.step
 
         return local_pixel_coords.astype(np.float32)
+
+    def _local_pixel_to_local_meter_coords(self, local_pixel_coords):
+        assert np.shape(local_pixel_coords)[0] == 2 or np.shape(local_meter_coords)[0] == 3, "invalid local_meter_coords shape, expected 2xn or 3xn"
+        local_pixel_coords_temp = np.copy(local_pixel_coords)
+        if np.shape(local_pixel_coords_temp)[0] == 3:
+            transform = np.array([[ 0.0000000, -1.0000000,  0.0000000],
+                                  [-1.0000000,  0.0000000,  0.0000000],
+                                  [ 0.0000000,  0.0000000,  1.0000000]])
+        elif np.shape(local_pixel_coords_temp)[0] == 2:
+            transform = np.array([[ 0.0000000, -1.0000000],
+                                  [-1.0000000,  0.0000000]])
+        local_pixel_coords_temp = np.matmul(np.linalg.inv(transform), local_pixel_coords_temp)
+
+        local_pixel_coords_temp = local_pixel_coords_temp*self.step
+
+        return local_pixel_coords_temp.astype(np.float32)
 
     def clear_img(self):
         self.width = 1

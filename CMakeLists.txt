@@ -161,10 +161,13 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/Spark3Cam.py
-  scripts/ImageAppend.py
-  scripts/Panorama.py
-  scripts/OdomTf.py
+  scripts/mapping/Spark3Cam.py
+  scripts/mapping/ImageAppend.py
+  scripts/mapping/Panorama.py
+  scripts/mapping/OdomTfSimulation.py
+  scripts/mapping/CornerDetector.py
+  scripts/mapping/Mapping.py
+  scripts/python-utils/utils.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

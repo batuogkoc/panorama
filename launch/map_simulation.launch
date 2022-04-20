@@ -1,0 +1,10 @@
+<launch>
+    <arg name="rate" default="1"/>
+    <node name="odom_to_tf" pkg="panorama" type="OdomTfSimulation.py"/>
+    
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--rate $(arg rate) --pause $(find panorama)/rosbag/mapping_top.bag /batu:=/camera/image/compressed"/>
+    <!-- 
+         <node pkg="panorama" name="mapping" type="Mapping.py"/>
+    -->
+   
+</launch>

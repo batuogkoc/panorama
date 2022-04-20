@@ -303,7 +303,7 @@ class Panorama():
         camera_pos, camera_rot = htm_to_pos_rot(camera.get_htm())
         roi_corner_pts_projected = project_points(roi_corner_pts_transformed, camera_pos)
         
-        to_pts = self.image_append.local_meter_to_local_pixel_coords(roi_corner_pts_projected)
+        to_pts = self.image_append._local_meter_to_local_pixel_coords(roi_corner_pts_projected)
         self.image_append.append(image, from_pts, to_pts)
     
     def project_all_cameras(self, extrapolate_htm=False):
@@ -315,3 +315,6 @@ class Panorama():
 
     def clear_img(self):
         self.image_append.clear_img()
+    
+    def pixel_to_meters(self, pixel_coords):
+        return self.image_append._local_pixel_to_local_meter_coords(pixel_coords+self.image_append.map_corner_coords.T)
