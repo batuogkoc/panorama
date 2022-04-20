@@ -5,11 +5,11 @@ import math as m
 import pickle
 
 #USER PARAMETERS
-image_path = "map_annotator/barcelona.png" #the path to the input image
-win_scale = 1 #how much the input image will be scaled
+image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/map.png" #the path to the input image
+win_scale = 0.6 #how much the input image will be scaled
 
-graph_load_dir = "graph.pickle" #where to load the previous graph from, if you will load. Won't do anytinh if there is no such file
-graph_save_dir = "graph.pickle" #where to save the graph
+graph_load_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/graph.pickle" #where to load the previous graph from, if you will load. Won't do anytinh if there is no such file
+graph_save_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/graph.pickle" #where to save the graph
 
 use_middle_mouse = False #whether to use middle mouse for clicks instead of left mouse button. Allows you to pan when zoomed but is a bit cumbersome. 
 
@@ -18,7 +18,10 @@ edge_add_mode = "e" #switch to edge addition mode. Consecutive clicks will add a
 delete_mode = "d" #switch to deletion mode. Clicks will delete the closest node or edge
 clear_graph = "c" #clears graph
 localise_mode = "l" #localises the mouse in the graph
+intersection_mode = "i" #add intersection. start from a node that has right to enter the intersection, go clockwise
 quit_button = "q" #quits and saves the constructed graph
+
+u_turn_at_intersections = False #if set to true, the intersection mode will generate a u turn node at intersections
 #END USER PARAMETERS
 
 win_name = "Annotator"
@@ -39,6 +42,8 @@ new_edge_first_point=None
 closest_node = None
 closest_edge = None
 mouse_coords = None
+
+intersection = []
 
 resizable_image = None
 
@@ -69,8 +74,7 @@ def distance_edge_center(point, edge):
     edge_center = ((edge[0][0]+edge[1][0])/2, (edge[0][1]+edge[1][1])/2)
     return distance(edge_center, point)
 
-def find_closest_node(point):
-    global nodes
+def find_closest_node(point, nodes):
     if len(nodes) > 0:
         closest = nodes[0]
         old_dist = distance(point, closest)
@@ -161,7 +165,9 @@ def delete_node(node, nodes, edges):
     edges = [edge for edge in edges if edge[0] != node and edge[1] != node]
     nodes.remove(node)
     return nodes, edges
-
+def newMod(a,b):
+    res = a%b
+    return res if not res else res-b if a<0 else res
 def click(event, x, y, flags, param):
     global nodes
     global edges
@@ -170,6 +176,7 @@ def click(event, x, y, flags, param):
     global closest_node
     global resizable_image
     global mouse_coords
+    global intersection
     point = resizable_image.out_to_in_point((x,y))
     mouse_coords = point
     if state == 0:
@@ -180,13 +187,13 @@ def click(event, x, y, flags, param):
 
     elif state == 1:
         if new_edge_first_point == None:
-            closest_node, _ = find_closest_node(point)
+            closest_node, _ = find_closest_node(point, nodes)
             if event == click_down:
                 pass
             elif event == click_up:
                 new_edge_first_point = closest_node
         else:
-            closest_node, _ = find_closest_node(point)
+            closest_node, _ = find_closest_node(point, nodes)
             if event == click_down:
                 pass
             elif event == click_up:
@@ -198,7 +205,7 @@ def click(event, x, y, flags, param):
 
 
     elif state == 2:
-        closest_node, dist_node = find_closest_node(point, edges)
+        closest_node, dist_node = find_closest_node(point, nodes)
         closest_edge, dist_edge = find_closest_edge(point, edges)
         try:
             if dist_edge >= dist_node:
@@ -210,13 +217,24 @@ def click(event, x, y, flags, param):
         if event == click_down:
             pass
         elif event == click_up:
-            if not closest_node == None:
+            if closest_node != None:
                 modes, edges = delete_node(closest_node, nodes, edges)
-            elif not closest_edge == None:
+            elif closest_edge != None:
                 edges.remove(closest_edge)
-
+    
+    elif state == 6:
+        closest_node, _ = find_closest_node(point, nodes)
+        if event == click_up:
+            intersection.append(closest_node)
+            if len(intersection) == 8:
+                for i in range(0, len(intersection), 2):
+                    for j in range(1,len(intersection)+1, 2):
+                        if newMod(j+1,8) != i or u_turn_at_intersections:
+                            edges.append((intersection[i], intersection[j]))
+                intersection = []
 
 if __name__ == "__main__":
+    print(7+1%8)
     cv2.namedWindow(win_name)
     cv2.setMouseCallback(win_name, click)
     resizable_image = ResizableImage(win_scale)
@@ -228,7 +246,6 @@ if __name__ == "__main__":
             pass
     while True:
         frame = np.copy(image)
-
         if state == 0:
             frame = draw_edges(frame, edges)
             frame = draw_nodes(frame, nodes)
@@ -264,10 +281,16 @@ if __name__ == "__main__":
                 print(edge[1])
             frame = draw_edges(frame, edges, special_edges=[current_edge]+next_edges, special_edge_colors=[(0,255,255)]+[(255,0,255) for i in range(len(next_edges))])
             frame = draw_nodes(frame, nodes)
+        elif state == 6:
+            frame = draw_edges(frame, edges)
+            frame = draw_nodes(frame, nodes, special_nodes=[closest_node]+ intersection, special_node_colors=[(255,0,255)]+[(255,255,0) if i%2==0 else (0,255,255) for i in range(len(intersection))])
 
+
+        if state != 6:
+            intersection = []
+        
         frame = resizable_image.resize(frame)
         cv2.imshow(win_name, frame)
-        
         key = cv2.waitKey(1) 
         if key == ord(node_add_mode):
             state = 0 #node adding mode
@@ -288,6 +311,8 @@ if __name__ == "__main__":
                 state = 4
         elif key == ord(localise_mode):
             state = 5
+        elif key == ord(intersection_mode):
+            state=6
         elif key == -1:
             continue
         else:
