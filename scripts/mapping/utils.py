@@ -192,7 +192,7 @@ def extrapolate_htm(stamp1, htm1, stamp2, htm2, target_stamp):
 
     stamp1_to_target = duration_to_sec(target_stamp-stamp1)
     stamp1_to_stamp2 = duration_to_sec(stamp2-stamp1)
-    print(stamp1_to_target/stamp1_to_stamp2, stamp1_to_target)
+
     velocity = (pos2-pos1)/stamp1_to_stamp2
     rotation = np.matmul(rot2, np.linalg.inv(rot1))
 

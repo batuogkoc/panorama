@@ -1,0 +1,3 @@
+[submodule "scripts/python-utils"]
+	path = scripts/python-utils
+	url = git@github.com:batuogkoc/python-utils.git

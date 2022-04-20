@@ -83,7 +83,7 @@ class Camera():
             return closest[1]
 
     def add_htm(self, htm, htm_stamp):
-        if not (htm_stamp, htm) in self.__htm_deque:
+        if not (htm_stamp in [a[0] for a in self.__htm_deque]):
             self.__htm_deque.append((htm_stamp, htm))
     
     # def set_htm(self, geometry_msgs_TransformStamped):
@@ -98,11 +98,8 @@ class Camera():
 
     def get_extrapolated_htm(self, stamp, return_stamped = False):
         indexes = np.argsort([abs(duration_to_sec(stamp-htm_stamped[0])) for htm_stamped in self.__htm_deque])
-        for i in indexes:
-            print(duration_to_sec(self.__htm_deque[i][0]-self.__htm_deque[indexes[-1]][0]))
         htm1_stamped = self.__htm_deque[indexes[0]]
         htm2_stamped = self.__htm_deque[indexes[1]]
-        print(htm1_stamped[1]-htm2_stamped[1])
         htm = (stamp, extrapolate_htm(htm1_stamped[0], htm1_stamped[1], htm2_stamped[0], htm2_stamped[1], stamp))
         if return_stamped:
             return htm
