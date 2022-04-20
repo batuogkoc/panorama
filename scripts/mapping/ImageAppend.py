@@ -20,7 +20,11 @@ class ImageAppend:
         self.depth = img_depth
         self.image = new_img
 
+<<<<<<< HEAD:scripts/mapping/ImageAppend.py
     def _local_meter_to_local_pixel_coords(self, local_meter_coords):
+=======
+    def local_meter_to_local_pixel_coords(self, local_meter_coords):
+>>>>>>> c7004acdc7c6a10f735cdaf1b0d93e81927ab1b5:scripts/ImageAppend.py
         assert np.shape(local_meter_coords)[0] == 2 or np.shape(local_meter_coords)[0] == 3, "invalid local_meter_coords shape, expected 2xn or 3xn"
         local_meter_coords_temp = np.copy(local_meter_coords)
         if np.shape(local_meter_coords)[0] == 3:
