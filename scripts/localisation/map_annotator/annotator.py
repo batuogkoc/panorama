@@ -5,11 +5,11 @@ import math as m
 import pickle
 
 #USER PARAMETERS
-image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/map.png" #the path to the input image
+image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map.png" #the path to the input image
 win_scale = 0.6 #how much the input image will be scaled
 
-graph_load_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/graph.pickle" #where to load the previous graph from, if you will load. Won't do anytinh if there is no such file
-graph_save_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/graph.pickle" #where to save the graph
+graph_load_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/graph.pickle" #where to load the previous graph from, if you will load. Won't do anytinh if there is no such file
+graph_save_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/graph.pickle" #where to save the graph
 
 use_middle_mouse = False #whether to use middle mouse for clicks instead of left mouse button. Allows you to pan when zoomed but is a bit cumbersome. 
 
@@ -100,7 +100,7 @@ def find_closest_edge(point, edges):
     else:
         return None, None
         
-def draw_nodes(img, nodes, node_color=(255,0,0), special_nodes=(), special_node_colors=(), size=3, thickness=5):
+def draw_nodes(img, nodes, node_color=(255,0,0), special_nodes=(), special_node_colors=(), size=3, thickness=2):
     frame = np.copy(img)
     for node in nodes:
         if special_nodes != None and node in special_nodes:
@@ -109,13 +109,20 @@ def draw_nodes(img, nodes, node_color=(255,0,0), special_nodes=(), special_node_
             frame = cv2.circle(frame, node, size, node_color, thickness=thickness)
     return frame
 
-def draw_edges(img, edges, edge_color=(0,255,0), special_edges=(), special_edge_colors=(), thickness = 3):
+def draw_edges(img, edges, edge_color=(0,255,0), special_edges=(), special_edge_colors=(), thickness = 3, use_arrows = True):
     frame = np.copy(img)
     for edge in edges:
         if special_edges != None and edge in special_edges:
-            frame = cv2.arrowedLine(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, line_type=cv2.LINE_AA)
+            if use_arrows:
+                frame = cv2.arrowedLine(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, line_type=cv2.LINE_AA)
+            else:
+                frame = cv2.line(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, lineType=cv2.LINE_AA)
         else:
-            frame = cv2.arrowedLine(frame, edge[0], edge[1], edge_color, thickness=thickness, line_type=cv2.LINE_AA)
+            if use_arrows:
+                frame = cv2.arrowedLine(frame, edge[0], edge[1], edge_color, thickness=thickness, line_type=cv2.LINE_AA)
+            else:
+                frame = cv2.line(frame, edge[0], edge[1], edge_color, thickness=thickness, lineType=cv2.LINE_AA)
+
     return frame
 
 def distance_to_edge(point, edge): # x3,y3 is the point

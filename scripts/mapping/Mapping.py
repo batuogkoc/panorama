@@ -30,6 +30,7 @@ camera_transform = None
 
 fourcc = cv2.VideoWriter_fourcc(*'DIVX')
 # out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
+map_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/map/map.panorama.pickle"
 first_time = True
 
 main_time = 0
@@ -64,7 +65,7 @@ def main():
     except AttributeError:
         rospy.loginfo("waiting for tf")
         return
-    print(camera_htm)
+    # print(camera_htm)
     panorama.cameras["camera"].add_htm(camera_htm, camera_transform.header.stamp)
 
     times.add("htm")
@@ -75,8 +76,7 @@ def main():
     
     resized_img = imshow_r("a", frame, (1600, 900))
     cv2.waitKey(1)
-    print(panorama.image_append.map_corner_coords)
-    # print(panorama.pixel_to_meters(np.zeros((2,1))))
+    # print(panorama.meters_to_pixels(np.zeros((2,1))))
     # out.write(resized_img)
     times.add("imshow")
     print(times)
@@ -104,5 +104,5 @@ if __name__ == "__main__":
     finally:
         rospy.loginfo("exiting")
         # out.release()
-        # with open("map.panorama", "wb") as f:
-        #     pickle.dump(panorama, f)
+        with open(map_path, "wb") as f:
+            pickle.dump(panorama, f)

@@ -40,7 +40,7 @@ rate_control_publisher = None
 
 def left_camera_callback(data):
     frame_id = "left_camera"
-    t = rospy.Time.now()
+    t = data.header.stamp
     global tf_buffer
     global panorama
     global bridge
@@ -55,7 +55,7 @@ def left_camera_callback(data):
 
 def right_camera_callback(data):
     frame_id = "right_camera"
-    t = rospy.Time.now()
+    t = data.header.stamp
     global tf_buffer
     global panorama
     global bridge
@@ -71,7 +71,7 @@ def right_camera_callback(data):
 
 def main_camera_callback(data):
     frame_id = "main_camera"
-    t = rospy.Time.now()
+    t = data.header.stamp
     global tf_buffer
     global panorama
     global bridge
@@ -102,8 +102,10 @@ def main_camera_callback(data):
     except Exception as e:
         rospy.logerr("couldn't get "+frame_id+" tf: "+ str(e))
     
+    main()
 
 def main():
+    print(rospy.Time())
     times = Times()
     global main_camera_transform
     global left_camera_transform
@@ -201,14 +203,13 @@ def node():
     panorama.add_camera(right_camera)
     panorama.add_camera(main_camera)
 
-    while True:
-        main()
+    rospy.spin()
 
 if __name__ == "__main__":
-    # try:
-    node()
-    # except Exception as e:
-    #     rospy.logerr(e)
-    # finally:
-    #     rospy.loginfo("exiting")
-    #     out.release()
+    try:
+        node()
+    except Exception as e:
+        rospy.logerr(e)
+    finally:
+        rospy.loginfo("exiting")
+        out.release()

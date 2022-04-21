@@ -318,3 +318,6 @@ class Panorama():
     
     def pixel_to_meters(self, pixel_coords):
         return self.image_append._local_pixel_to_local_meter_coords(pixel_coords+self.image_append.map_corner_coords.T)
+
+    def meters_to_pixels(self, meter_coords):
+        return self.image_append._local_meter_to_local_pixel_coords(meter_coords) - self.image_append.map_corner_coords.T
