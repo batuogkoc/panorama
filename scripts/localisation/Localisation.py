@@ -35,6 +35,8 @@ def node():
                 new_edge = (edge[1], edge[0])
                 if not new_edge in edges:
                     edges.append(new_edge)
+    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    out = cv2.VideoWriter("output.avi", fourcc, 15, (1200, 1400))
     while True:
         map_image = np.copy(map_image_original)
         try:
@@ -77,7 +79,8 @@ def node():
         map_image = an.draw_edges(map_image, edges, special_edges=[current_edge]+next_edges, special_edge_colors=[(0,255,255)]+[(255,0,255) for i in range(len(next_edges))], use_arrows=directed)
         map_image = an.draw_nodes(map_image, nodes)
         map_image = cv2.fillPoly(map_image, [marker_final], (255,255,0), lineType=cv2.LINE_AA)
-        imshow_r("win", map_image, (1600,900))
+        img  = imshow_r("win", map_image, (1200,1400))
+        out.write(img)
         if cv2.waitKey(1) == ord("q"):
             return
         
@@ -89,3 +92,4 @@ if __name__=="__main__":
         rospy.loginfo("Quitting: " + e)
     finally:
         cv2.destroyAllWindows()
+        out.release()

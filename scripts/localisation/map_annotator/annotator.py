@@ -112,17 +112,20 @@ def draw_nodes(img, nodes, node_color=(255,0,0), special_nodes=(), special_node_
 def draw_edges(img, edges, edge_color=(0,255,0), special_edges=(), special_edge_colors=(), thickness = 3, use_arrows = True):
     frame = np.copy(img)
     for edge in edges:
-        if special_edges != None and edge in special_edges:
-            if use_arrows:
-                frame = cv2.arrowedLine(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, line_type=cv2.LINE_AA)
-            else:
-                frame = cv2.line(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, lineType=cv2.LINE_AA)
-        else:
+        if special_edges == None or not edge in special_edges:
             if use_arrows:
                 frame = cv2.arrowedLine(frame, edge[0], edge[1], edge_color, thickness=thickness, line_type=cv2.LINE_AA)
             else:
                 frame = cv2.line(frame, edge[0], edge[1], edge_color, thickness=thickness, lineType=cv2.LINE_AA)
 
+    for edge in edges:
+        if special_edges != None and edge in special_edges:
+            if use_arrows:
+                frame = cv2.arrowedLine(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, line_type=cv2.LINE_AA)
+            else:
+                frame = cv2.line(frame, edge[0], edge[1], special_edge_colors[special_edges.index(edge)], thickness=thickness, lineType=cv2.LINE_AA)
+
+    
     return frame
 
 def distance_to_edge(point, edge): # x3,y3 is the point
