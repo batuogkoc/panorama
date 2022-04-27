@@ -1,44 +1,53 @@
+import sys
+sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+from utils import *
 import numpy as np
 import cv2
+import math as m
 
-class Node():
-    def __init__(self):
-        self.position = np.zeros((2,1))
-        self.__travelable = False #can it be traveled on?
-    def travelable(self):
-        return self.__travelable
+
+class Node():    
     def __init__(self, position):
+        self.travelable = False
         position = np.array(position, dtype=int)
         assert np.shape(position) == (2,1), f"Incorrect input shape {np.shape(position)} , expected (2,1)"
         self.position = position
+
+    def is_travelable(self):
+        return self.travelable
+
     def distance_to(self, point):
         point = np.array(point, dtype=int)
         assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(point)} , expected (2,1)"
-        return m.sqrt(np.dot(self.position, point))
+        return m.sqrt((self.position[0][0] -point[0][0])**2+(self.position[1][0] -point[1][0])**2)
+    
     def draw(self, image, color=(255,0,0,), size=4): 
+        node = (self.position[0][0], self.position[1][0])
         return cv2.circle(image, node, int(m.ceil(size/2)), color, thickness=size, lineType=cv2.LINE_AA)
 
-class Edge():
-    def __init__(self):
-        self.nodes = (Node(),Node())
-        self.__travelable = True #can it be traveled on?
+    def __str__(self):
+        return str(self.position)
 
-    def travelable(self):
-        return self.__travelable
+
+class Edge():
     def __init__(self, node1, node2):
         assert type(node1) == Node, f"node1 must be a node, not a {type(node1)}"
         assert type(node2) == Node, f"node2 must be a node, not a {type(node2)}"
         self.nodes = (node1, node2)
+        self.travelable=True
+    def is_travelable(self):
+        return self.travelable
+   
     def distance_to(self, point):
         point = np.array(point,dtype=int)
         assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(point)} , expected (2,1)"
         node1, node2 = self.nodes
         x1 = node1.position[0][0]
-        y1 = node1.position[0][1]
-        x2 = node1.position[0][0]
-        y2 = node1.position[0][1]
+        y1 = node1.position[1][0]
+        x2 = node2.position[0][0]
+        y2 = node2.position[1][0]
         x3 = point[0][0]
-        y3 = point[0][1]
+        y3 = point[1][0]
         px = x2-x1
         py = y2-y1
 
@@ -67,15 +76,15 @@ class Edge():
 
         return dist
 
-    def draw(self, image, color=(0,255,255), size=3, is_directed=True):
-        x1 = node1.position[0][0]
-        y1 = node1.position[0][1]
-        x2 = node1.position[0][0]
-        y2 = node1.position[0][1]
+    def draw(self, image, color=(0,255,0), size=3, is_directed=True):
+        x1 = self.nodes[0].position[0][0]
+        y1 = self.nodes[0].position[1][0]
+        x2 = self.nodes[1].position[0][0]
+        y2 = self.nodes[1].position[1][0]
         if is_directed:
-            return cv2.arrowedLine(image, (x1, y1), (x2,y2), edge_color, thickness=size, line_type=cv2.LINE_AA)
+            return cv2.arrowedLine(image, (x1, y1), (x2,y2), color, thickness=size, line_type=cv2.LINE_AA)
         else:
-            return cv2.line(image, (x1, y1), (x2,y2), edge_color, thickness=size, lineType=cv2.LINE_AA)
+            return cv2.line(image, (x1, y1), (x2,y2), color, thickness=size, lineType=cv2.LINE_AA)
 
     def travelable_nodes(self, invert_direction=False, undirected=False):
         entering_node = self.nodes[0]
@@ -99,14 +108,16 @@ class Edge():
         return node in self.nodes
 
 class Intersection():
+
     def __init__(self, nodes):
         assert len(nodes)%2 == 0 and len(nodes)>=4, f"Length of nodes must be >= 4 and be a multiple of 2"
         for node in nodes:
             assert type(node) == Node, "All elements of nodes must be of type node"
         self.nodes = nodes
-        self.__travelable = True #can it be traveled on?
-    def travelable(self):
-        return self.__travelable
+        self.travelable = True #can it be traveled on?
+
+    def is_travelable(self):
+        return self.travelable
     def entering_nodes(self):
         return [self.nodes[i] for i in range(0,len(self.nodes),2)]
     def exiting_nodes(self):
@@ -117,24 +128,39 @@ class Intersection():
         Y = 0
         for node in self.nodes:
             X+=node.position[0][0]
-            Y+=node.position[0][1]
+            Y+=node.position[1][0]
         X/=len(self.nodes)
         Y/=len(self.nodes)
-        return np.arrray([[X],[Y]])
+        return np.array([[X],[Y]], dtype=int)
 
     def draw(self, image, color=(0,255,0), size=3):
         ret = np.copy(image)
+        if color==(0,255,0):
+            text_color = (255,0,255)
+            line_color = (0,255,0)
+        else:
+            text_color=color
+            line_color=color
         for i in range(len(self.nodes)):
             edge = Edge(self.nodes[i], self.nodes[(i+1)%len(self.nodes)])
-            ret = edge.draw(ret, color, size, False)
+            ret = edge.draw(ret, line_color, size, False)
         center = self.__center_point()
         x = center[0][0]
-        y = center[0][1]
-        ret = cv2.putText(ret, "I", (x,y), cv2.FONT_HERSHEY_SIMPLEX, size*10, color)
+        y = center[1][0]
+        ret = putTextCenter(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
+        # ret = cv2.putText(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
         return ret
-    def distance_to(self, point):
-        self_center_node = Node(self.__center_point())
-        return self_center_node.distance_to(point)
+    def distance_to(self, point, debug=False):
+        # self_center_node = Node(self.__center_point())
+        edges = [Edge(self.nodes[i], self.nodes[(i+1)%len(self.nodes)]) for i in range(len(self.nodes))]
+        min_dist = m.inf
+        for edge in edges:
+            dist = edge.distance_to(point)
+            if min_dist > dist:
+                min_dist = dist
+        if debug==True:
+            return edges
+        return dist
 
     def travelable_nodes(self, invert_direction=False, undirected=False):
         entering_nodes = self.entering_nodes()
@@ -161,10 +187,10 @@ class Graph():
         self.elements = []
     def draw(self, image, special_elements=[], special_element_colors=[]):
         ret = np.copy(image)
-        for element in elements:
+        for element in self.elements:
             if not element in special_elements:
                 ret = element.draw(ret)
-        for element in elements:
+        for element in self.elements:
             if element in special_elements:
                 ret = element.draw(ret, color=special_element_colors[special_elements.index(element)])
         return ret
@@ -179,26 +205,35 @@ class Graph():
         else:
             return False
     
-    def find_closest_element(self, point, return_distance=False):
+    def find_closest_element(self, point, element_type=None, return_distance=False, strictly_travelable=False):
         point = np.array(point, dtype=int)
         assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
         assert type(return_distance) == bool, f"return_distance type must be bool, not {type(return_distance)}"
-        closest_element = self.elements[0]
-        closest_element_distance = closest_element.distance_to(point)
+        closest_element = None
+        closest_element_distance = m.inf
         for element in self.elements:
-            current_distance = element.distance_to(point)
-            if current_distance<closest_element_distance:
-                closest_element = element
-                closest_element_distance=element
+            if (element_type==None or type(element)==element_type) and (strictly_travelable <= element.is_travelable()):
+                current_distance = element.distance_to(point)
+                if current_distance<closest_element_distance:
+                    closest_element = element
+                    closest_element_distance=current_distance
         if return_distance:
             return closest_element, closest_element_distance
         else:
-            return closest
-    
+            return closest_element
+
     def find_travelable_nodes(self, point, invert_direction=False, undirected=False):
         point = np.array(point, dtype=int)
         assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
-        current_element = self.find_closest_element(point)
+        current_element = self.find_closest_element(point, strictly_travelable=True)
+        if current_element == None:
+            return [], []
         legal_nodes, illegal_nodes = current_element.travelable_nodes(invert_direction, undirected)
         return legal_nodes, illegal_nodes
 
+    def clear(self):
+        self.elements = []
+
+if __name__=="__main__":
+    edge = Edge(Node(np.array([[0,0]]).T), Node(np.array([[0,0]]).T))
+    print(edge.is_travelable())

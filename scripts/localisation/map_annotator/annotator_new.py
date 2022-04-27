@@ -3,6 +3,8 @@ from enum import Enum
 import numpy as np
 import math as m
 import pickle
+from Graph import *
+
 
 #USER PARAMETERS
 image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map.png" #the path to the input image
@@ -26,7 +28,6 @@ u_turn_at_intersections = False #if set to true, the intersection mode will gene
 
 win_name = "Annotator"
 
-image = cv2.imread(image_path)
 if not use_middle_mouse:
     click_down = cv2.EVENT_LBUTTONDOWN
     click_up = cv2.EVENT_LBUTTONUP
@@ -35,134 +36,19 @@ else:
     click_up = cv2.EVENT_MBUTTONUP
 
 state = 0
-nodes = []
-edges = []
 
-new_edge_first_point=None
-closest_node = None
-closest_edge = None
+global graph
+graph = Graph()
+
 mouse_coords = None
 
+special_elements = []
+special_element_colors = []
+
+new_edge_first_node=None
 intersection = []
 
 resizable_image = None
-
-class Node():
-    def __init__(self):
-        self.position = np.zeros((2,1))
-    def __init__(self, position):
-        position = np.array(position, dtype=int)
-        assert np.shape(position) == (2,1), f"Incorrect input shape {np.shape(position)} , expected (2,1)"
-        self.position = position
-    def distance_to(self, point):
-        point = np.array(point, dtype=int)
-        assert np.shape(position) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
-        return m.sqrt(np.dot(self.position, point))
-    def draw(self, image, color=(255,0,0,), size=4): 
-        return cv2.circle(image, node, int(m.ceil(size/2)), color, thickness=size, lineType=cv2.LINE_AA)
-
-class Edge():
-    def __init__(self):
-        self.nodes = (Node(),Node())
-    def __init__(self, node1, node2):
-        assert type(node1) == Node, f"node1 must be a node, not a {type(node1)}"
-        assert type(node2) == Node, f"node2 must be a node, not a {type(node2)}"
-        self.nodes = (node1, node2)
-    def distance_to(self, point):
-        point = np.array(point,dtype=int)
-        assert np.shape(position) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
-        node1, node2 = self.nodes
-        x1 = node1.position[0][0]
-        y1 = node1.position[0][1]
-        x2 = node1.position[0][0]
-        y2 = node1.position[0][1]
-        x3 = point[0][0]
-        y3 = point[0][1]
-        px = x2-x1
-        py = y2-y1
-
-        norm = px*px + py*py
-
-        u =  ((x3 - x1) * px + (y3 - y1) * py) / float(norm)
-
-        if u > 1:
-            u = 1
-        elif u < 0:
-            u = 0
-
-        x = x1 + u * px
-        y = y1 + u * py
-
-        dx = x - x3
-        dy = y - y3
-
-        # Note: If the actual distance does not matter,
-        # if you only want to compare what this function
-        # returns to other results of this function, you
-        # can just return the squared distance instead
-        # (i.e. remove the sqrt) to gain a little performance
-
-        dist = (dx*dx + dy*dy)**.5
-
-        return dist
-
-    def draw(self, image, color=(0,255,255), size=3, is_directed=True):
-        x1 = node1.position[0][0]
-        y1 = node1.position[0][1]
-        x2 = node1.position[0][0]
-        y2 = node1.position[0][1]
-        if is_directed:
-            return cv2.arrowedLine(image, (x1, y1), (x2,y2), edge_color, thickness=size, line_type=cv2.LINE_AA)
-        else:
-            return cv2.line(image, (x1, y1), (x2,y2), edge_color, thickness=size, lineType=cv2.LINE_AA)
-
-class Intersection():
-    def __init__(self, nodes):
-        assert len(nodes)%2 == 0 and len(nodes)>=4, f"Length of nodes must be >= 4 and be a multiple of 2"
-        for node in nodes:
-            assert type(node) == Node, "All elements of nodes must be of type node"
-        self.nodes = nodes
-    def entering_nodes(self):
-        return [self.nodes[i] for i in range(0,len(self.nodes),2)]
-    def exiting_nodes(self):
-        return [self.nodes[i] for i in range(1,len(self.nodes)+1,2)]
-    
-    def __center_point(self):
-        X = 0
-        Y = 0
-        for node in self.nodes:
-            X+=node.position[0][0]
-            Y+=node.position[0][1]
-        X/=len(self.nodes)
-        Y/=len(self.nodes)
-        return np.arrray([[X],[Y]])
-
-    def draw(self, image, color=(0,255,0), size=3):
-        ret = np.copy(image)
-        for i in range(len(self.nodes)):
-            edge = Edge(self.nodes[i], self.nodes[(i+1)%len(self.nodes)])
-            ret = edge.draw(ret, color, size, False)
-        center = self.__center_point()
-        x = center[0][0]
-        y = center[0][1]
-        ret = cv2.putText(ret, "I", (x,y), cv2.FONT_HERSHEY_SIMPLEX, size*10, color)
-        return ret
-    def distance_to(self, point):
-        edge_self = Node(self.__center_point())
-        return edge_self.distance_to(point)
-
-class Graph():
-    def __init__(self):
-        self.elements = []
-    def draw(self, image, special_elements=[], special_element_colors=[]):
-        ret = np.copy(image)
-        for element in elements:
-            if not element in special_elements:
-                ret = element.draw(ret)
-        for element in elements:
-            if element in special_elements:
-                ret = element.draw(ret, color=special_element_colors[special_elements.index(element)])
-        return ret
 
 
 class ResizableImage():
@@ -297,126 +183,128 @@ def newMod(a,b):
     res = a%b
     return res if not res else res-b if a<0 else res
 def click(event, x, y, flags, param):
-    global nodes
-    global edges
-    global new_edge_first_point
-    global closest_edge 
-    global closest_node
+    global graph
+    global new_edge_first_node
+    global special_elements
+    global special_element_colors
+
     global resizable_image
     global mouse_coords
     global intersection
     point = resizable_image.out_to_in_point((x,y))
+    point = np.array([[point[0]], [point[1]]], dtype=int)
     mouse_coords = point
     if state == 0:
+        special_elements = []
+        special_element_colors = []
         if event == click_down:
-            nodes.append(point)
-        elif event == click_up:
             pass
+        elif event == click_up:
+            graph.add_element(Node(mouse_coords))
 
     elif state == 1:
-        if new_edge_first_point == None:
-            closest_node, _ = find_closest_node(point, nodes)
+        closest_element = graph.find_closest_element(mouse_coords, element_type=Node)
+        if new_edge_first_node == None:
+            special_elements = [closest_element]
+            special_element_colors = [(0,255,255)]
             if event == click_down:
                 pass
             elif event == click_up:
-                new_edge_first_point = closest_node
+                new_edge_first_node = closest_element
         else:
-            closest_node, _ = find_closest_node(point, nodes)
+            special_elements = [new_edge_first_node, closest_element]
+            special_element_colors = [(255,255,0),(0,255,255)]
             if event == click_down:
                 pass
             elif event == click_up:
-                if new_edge_first_point != closest_node:
-                    edges.append((new_edge_first_point, closest_node))
-                    new_edge_first_point = None
+                if new_edge_first_node != closest_element:
+                    graph.add_element(Edge(new_edge_first_node, closest_element))
+                    new_edge_first_node = None
                 else:
-                    new_edge_first_point = None
+                    new_edge_first_node = None
 
 
     elif state == 2:
-        closest_node, dist_node = find_closest_node(point, nodes)
-        closest_edge, dist_edge = find_closest_edge(point, edges)
-        try:
-            if dist_edge >= dist_node:
-                closest_edge = None
-            else:
-                closest_node = None
-        except TypeError:
-            pass
+        closest_element = graph.find_closest_element(mouse_coords)
+        special_elements = [closest_element]
+        special_element_colors = [(0,0,255)]
         if event == click_down:
             pass
         elif event == click_up:
-            if closest_node != None:
-                modes, edges = delete_node(closest_node, nodes, edges)
-            elif closest_edge != None:
-                edges.remove(closest_edge)
+            graph.remove_element(closest_element)
     
     elif state == 6:
-        closest_node, _ = find_closest_node(point, nodes)
+        closest_node=graph.find_closest_element(mouse_coords, element_type=Node)
+        special_elements=[closest_node]+intersection
+        special_element_colors=[(255,0,255)]+[(255,255,0) if i%2==0 else (0,255,255) for i in range(len(intersection))]
         if event == click_up:
             intersection.append(closest_node)
-            if len(intersection) == 8:
-                for i in range(0, len(intersection), 2):
-                    for j in range(1,len(intersection)+1, 2):
-                        if newMod(j+1,8) != i or u_turn_at_intersections:
-                            edges.append((intersection[i], intersection[j]))
-                intersection = []
 
 if __name__ == "__main__":
-    print(7+1%8)
+
+    image = cv2.imread(image_path)
     cv2.namedWindow(win_name)
     cv2.setMouseCallback(win_name, click)
     resizable_image = ResizableImage(win_scale)
     if graph_load_dir != "":
         try:
             with open(graph_load_dir, "rb") as file:
-                nodes, edges = pickle.load(file)
+                loaded_object = pickle.load(file)
+                if type(loaded_object) == Graph:
+                    graph = loaded_object
         except FileNotFoundError:
             pass
     while True:
         frame = np.copy(image)
-        if state == 0:
-            frame = draw_edges(frame, edges)
-            frame = draw_nodes(frame, nodes)
-        elif state == 1:
-            frame = draw_edges(frame, edges)
-            frame = draw_nodes(frame, nodes, special_nodes=[closest_node, new_edge_first_point], special_node_colors=[(0,255,255), (255,255,0)])
-        elif state == 2:
-            if closest_edge != None:
-                frame = draw_edges(frame, edges, special_edges=[closest_edge], special_edge_colors=[(0,0,255)])
-            else:
-                frame = draw_edges(frame, edges)
+        # if state == 0:
+        #     frame = draw_edges(frame, edges)
+        #     frame = draw_nodes(frame, nodes)
+        # elif state == 1:
+        #     frame = draw_edges(frame, edges)
+        #     frame = draw_nodes(frame, nodes, special_nodes=[closest_node, new_edge_first_point], special_node_colors=[(0,255,255), (255,255,0)])
+        # elif state == 2:
+        #     if closest_edge != None:
+        #         frame = draw_edges(frame, edges, special_edges=[closest_edge], special_edge_colors=[(0,0,255)])
+        #     else:
+        #         frame = draw_edges(frame, edges)
                 
-            if closest_node != None:
-                frame = draw_nodes(frame, nodes, special_nodes=[closest_node], special_node_colors=[(0,0,255)])
-            else:
-                frame = draw_nodes(frame, nodes)
+        #     if closest_node != None:
+        #         frame = draw_nodes(frame, nodes, special_nodes=[closest_node], special_node_colors=[(0,0,255)])
+        #     else:
+        #         frame = draw_nodes(frame, nodes)
         
-        elif state == 3:
-            frame = draw_edges(frame, edges)
-            frame = draw_nodes(frame, nodes)
+        if state == 3:
             height, width, depth = np.shape(frame)
-            frame = cv2.putText(frame, "Quit?",(width//2-200, height//2), cv2.FONT_HERSHEY_COMPLEX, 5, (0,0,255), thickness=10, lineType=cv2.LINE_AA)
+            frame = putTextCenter(frame, "Quit?",(width//2, height//2), cv2.FONT_HERSHEY_COMPLEX, 5, (0,0,255), thickness=10, lineType=cv2.LINE_AA)
         elif state == 4:
-            frame = draw_edges(frame, edges)
-            frame = draw_nodes(frame, nodes)
             height, width, depth = np.shape(frame)
-            frame = cv2.putText(frame, "Clear?",(width//2-250, height//2), cv2.FONT_HERSHEY_COMPLEX, 5, (0,0,255), thickness=10, lineType=cv2.LINE_AA)
+            frame = putTextCenter(frame, "Clear?",(width//2, height//2), cv2.FONT_HERSHEY_COMPLEX, 5, (0,0,255), thickness=10, lineType=cv2.LINE_AA)
         elif state == 5:
-            current_edge, next_edges = localise_in_graph(mouse_coords, edges)
-            print(f"\n\nAvailable roads: {len(next_edges)}")
-            print("Possible nodes to travel to")
-            for edge in next_edges:
-                print(edge[1])
-            frame = draw_edges(frame, edges, special_edges=[current_edge]+next_edges, special_edge_colors=[(0,255,255)]+[(255,0,255) for i in range(len(next_edges))])
-            frame = draw_nodes(frame, nodes)
-        elif state == 6:
-            frame = draw_edges(frame, edges)
-            frame = draw_nodes(frame, nodes, special_nodes=[closest_node]+ intersection, special_node_colors=[(255,0,255)]+[(255,255,0) if i%2==0 else (0,255,255) for i in range(len(intersection))])
+            legal_nodes, illegal_nodes = graph.find_travelable_nodes(mouse_coords)
+            current_travelable_element = graph.find_closest_element(mouse_coords, strictly_travelable=True)
+            print(f"\nLegal node count: {len(legal_nodes)}")
+            print("Possible legal nodes to travel to")
+            for node in legal_nodes:
+                print(node.position)
+            
+            special_elements = [current_travelable_element]+legal_nodes
+            special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))]
 
+            for element in graph.elements:
+                if type(element) == Intersection:
+                    for edge in element.distance_to(mouse_coords, debug=True):
+                        frame = edge.draw(frame)
 
+        # elif state == 6:
+        #     frame = draw_edges(frame, edges)
+        #     frame = draw_nodes(frame, nodes, special_nodes=[closest_node]+ intersection, special_node_colors=[(255,0,255)]+[(255,255,0) if i%2==0 else (0,255,255) for i in range(len(intersection))])
+
+        if state != 1:
+            new_edge_first_node = None
         if state != 6:
             intersection = []
-        
+
+        frame = graph.draw(frame, special_elements=special_elements, special_element_colors=special_element_colors)
         frame = resizable_image.resize(frame)
         cv2.imshow(win_name, frame)
         key = cv2.waitKey(1) 
@@ -432,14 +320,19 @@ if __name__ == "__main__":
             state = 3
         elif key == ord(clear_graph):
             if state == 4:
-                nodes = []
-                edges = []
+                graph.clear()
                 state = 0
             else:
                 state = 4
         elif key == ord(localise_mode):
             state = 5
         elif key == ord(intersection_mode):
+            if state==6 and intersection != []:
+                try:
+                    graph.add_element(Intersection(intersection))
+                except AssertionError:
+                    pass
+                intersection = []
             state=6
         elif key == -1:
             continue
@@ -449,4 +342,4 @@ if __name__ == "__main__":
     cv2.destroyAllWindows()
     # if graph_save_dir != "":
     #     with open(graph_save_dir,'wb') as file:
-    #         pickle.dump((nodes, edges), file)
+    #         pickle.dump(graph, file)
