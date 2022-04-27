@@ -1,5 +1,6 @@
 #usr/bin/env python
-
+import sys
+sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
 from CornerDetector import find_corners
 import rospy
 import Panorama
@@ -105,12 +106,10 @@ def main_camera_callback(data):
     main()
 
 def main():
-    print(rospy.Time())
     times = Times()
     global main_camera_transform
     global left_camera_transform
     global right_camera_transform
-    rospy.spin()
     try:
         left_camera_htm = geometry_msgs_TransformStamped_to_htm(left_camera_transform)
         right_camera_htm = geometry_msgs_TransformStamped_to_htm(right_camera_transform)
@@ -140,32 +139,30 @@ def main():
     right_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, right_camera_htm)
     left_local_htm = np.matmul(map_tranform_htm_only_z_rot_inv, left_camera_htm)
 
-    # main_local_htm = main_camera_htm
-    # left_local_htm = left_camera_htm
-    # right_local_htm = right_camera_htm
+    main_local_htm = main_camera_htm
+    left_local_htm = left_camera_htm
+    right_local_htm = right_camera_htm
 
     panorama.cameras["left_camera"].add_htm(left_local_htm, left_camera_transform.header.stamp)
     panorama.cameras["right_camera"].add_htm(right_local_htm, right_camera_transform.header.stamp)
     panorama.cameras["main_camera"].add_htm(main_local_htm, main_camera_transform.header.stamp)
 
     times.add("htm")
-    panorama.clear_img()
-    # panorama.project_all_cameras(extrapolate_htm=True)
-    panorama.project_camera("main_camera", extrapolate_htm=True)
-    frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3))
+    # panorama.clear_img()
+    panorama.project_all_cameras(extrapolate_htm=False)
+    # panorama.project_camera("main_camera", extrapolate_htm=True)
+    frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
     times.add("project")
 
-    right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
-    for corner in right_handed_corners:
-        cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
-    times.add("detect corners")
+    # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+    # for corner in right_handed_corners:
+    #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+    # times.add("detect corners")
     resized_img = imshow_r("a", frame, (1600, 900))
     cv2.waitKey(1)
 
     # out.write(resized_img)
     times.add("imshow")
-    
-    times.add("spin")
     print(times)
     rate_control_string = std_msgs.msg.String()
     rate_control_string.data = "Done"

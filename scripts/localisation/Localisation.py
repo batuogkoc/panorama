@@ -36,6 +36,7 @@ def node():
                 if not new_edge in edges:
                     edges.append(new_edge)
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    global out
     out = cv2.VideoWriter("output.avi", fourcc, 15, (1200, 1400))
     while True:
         map_image = np.copy(map_image_original)

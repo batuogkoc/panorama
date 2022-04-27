@@ -47,6 +47,124 @@ intersection = []
 
 resizable_image = None
 
+class Node():
+    def __init__(self):
+        self.position = np.zeros((2,1))
+    def __init__(self, position):
+        position = np.array(position, dtype=int)
+        assert np.shape(position) == (2,1), f"Incorrect input shape {np.shape(position)} , expected (2,1)"
+        self.position = position
+    def distance_to(self, point):
+        point = np.array(point, dtype=int)
+        assert np.shape(position) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
+        return m.sqrt(np.dot(self.position, point))
+    def draw(self, image, color=(255,0,0,), size=4): 
+        return cv2.circle(image, node, int(m.ceil(size/2)), color, thickness=size, lineType=cv2.LINE_AA)
+
+class Edge():
+    def __init__(self):
+        self.nodes = (Node(),Node())
+    def __init__(self, node1, node2):
+        assert type(node1) == Node, f"node1 must be a node, not a {type(node1)}"
+        assert type(node2) == Node, f"node2 must be a node, not a {type(node2)}"
+        self.nodes = (node1, node2)
+    def distance_to(self, point):
+        point = np.array(point,dtype=int)
+        assert np.shape(position) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
+        node1, node2 = self.nodes
+        x1 = node1.position[0][0]
+        y1 = node1.position[0][1]
+        x2 = node1.position[0][0]
+        y2 = node1.position[0][1]
+        x3 = point[0][0]
+        y3 = point[0][1]
+        px = x2-x1
+        py = y2-y1
+
+        norm = px*px + py*py
+
+        u =  ((x3 - x1) * px + (y3 - y1) * py) / float(norm)
+
+        if u > 1:
+            u = 1
+        elif u < 0:
+            u = 0
+
+        x = x1 + u * px
+        y = y1 + u * py
+
+        dx = x - x3
+        dy = y - y3
+
+        # Note: If the actual distance does not matter,
+        # if you only want to compare what this function
+        # returns to other results of this function, you
+        # can just return the squared distance instead
+        # (i.e. remove the sqrt) to gain a little performance
+
+        dist = (dx*dx + dy*dy)**.5
+
+        return dist
+
+    def draw(self, image, color=(0,255,255), size=3, is_directed=True):
+        x1 = node1.position[0][0]
+        y1 = node1.position[0][1]
+        x2 = node1.position[0][0]
+        y2 = node1.position[0][1]
+        if is_directed:
+            return cv2.arrowedLine(image, (x1, y1), (x2,y2), edge_color, thickness=size, line_type=cv2.LINE_AA)
+        else:
+            return cv2.line(image, (x1, y1), (x2,y2), edge_color, thickness=size, lineType=cv2.LINE_AA)
+
+class Intersection():
+    def __init__(self, nodes):
+        assert len(nodes)%2 == 0 and len(nodes)>=4, f"Length of nodes must be >= 4 and be a multiple of 2"
+        for node in nodes:
+            assert type(node) == Node, "All elements of nodes must be of type node"
+        self.nodes = nodes
+    def entering_nodes(self):
+        return [self.nodes[i] for i in range(0,len(self.nodes),2)]
+    def exiting_nodes(self):
+        return [self.nodes[i] for i in range(1,len(self.nodes)+1,2)]
+    
+    def __center_point(self):
+        X = 0
+        Y = 0
+        for node in self.nodes:
+            X+=node.position[0][0]
+            Y+=node.position[0][1]
+        X/=len(self.nodes)
+        Y/=len(self.nodes)
+        return np.arrray([[X],[Y]])
+
+    def draw(self, image, color=(0,255,0), size=3):
+        ret = np.copy(image)
+        for i in range(len(self.nodes)):
+            edge = Edge(self.nodes[i], self.nodes[(i+1)%len(self.nodes)])
+            ret = edge.draw(ret, color, size, False)
+        center = self.__center_point()
+        x = center[0][0]
+        y = center[0][1]
+        ret = cv2.putText(ret, "I", (x,y), cv2.FONT_HERSHEY_SIMPLEX, size*10, color)
+        return ret
+    def distance_to(self, point):
+        edge_self = Node(self.__center_point())
+        return edge_self.distance_to(point)
+
+class Graph():
+    def __init__(self):
+        self.elements = []
+    def draw(self, image, special_elements=[], special_element_colors=[]):
+        ret = np.copy(image)
+        for element in elements:
+            if not element in special_elements:
+                ret = element.draw(ret)
+        for element in elements:
+            if element in special_elements:
+                ret = element.draw(ret, color=special_element_colors[special_elements.index(element)])
+        return ret
+
+
 class ResizableImage():
     def __init__(self, scale):
         self.scale = scale
