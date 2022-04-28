@@ -290,11 +290,6 @@ if __name__ == "__main__":
             special_elements = [current_travelable_element]+legal_nodes
             special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))]
 
-            for element in graph.elements:
-                if type(element) == Intersection:
-                    for edge in element.distance_to(mouse_coords, debug=True):
-                        frame = edge.draw(frame)
-
         # elif state == 6:
         #     frame = draw_edges(frame, edges)
         #     frame = draw_nodes(frame, nodes, special_nodes=[closest_node]+ intersection, special_node_colors=[(255,0,255)]+[(255,255,0) if i%2==0 else (0,255,255) for i in range(len(intersection))])
@@ -330,6 +325,9 @@ if __name__ == "__main__":
             if state==6 and intersection != []:
                 try:
                     graph.add_element(Intersection(intersection))
+                    # for edge in [Edge(intersection[i], intersection[(i+1)%len(intersection)]) for i in range(len(intersection))]:
+                    #     graph.add_element(edge)
+
                 except AssertionError:
                     pass
                 intersection = []

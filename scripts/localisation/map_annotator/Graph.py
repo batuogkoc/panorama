@@ -73,7 +73,7 @@ class Edge():
         # (i.e. remove the sqrt) to gain a little performance
 
         dist = (dx*dx + dy*dy)**.5
-
+        print(f"e: {dist}")
         return dist
 
     def draw(self, image, color=(0,255,0), size=3, is_directed=True):
@@ -150,7 +150,7 @@ class Intersection():
         ret = putTextCenter(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
         # ret = cv2.putText(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
         return ret
-    def distance_to(self, point, debug=False):
+    def distance_to(self, point):
         # self_center_node = Node(self.__center_point())
         edges = [Edge(self.nodes[i], self.nodes[(i+1)%len(self.nodes)]) for i in range(len(self.nodes))]
         min_dist = m.inf
@@ -158,9 +158,7 @@ class Intersection():
             dist = edge.distance_to(point)
             if min_dist > dist:
                 min_dist = dist
-        if debug==True:
-            return edges
-        return dist
+        return min_dist
 
     def travelable_nodes(self, invert_direction=False, undirected=False):
         entering_nodes = self.entering_nodes()
