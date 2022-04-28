@@ -28,6 +28,10 @@ class Node():
     def __str__(self):
         return str(self.position)
 
+    # @classmethod
+    # def fromSameObject(cls, node):
+    #     assert type(node) == cls, f"node must be of type {cls}, not {type(node)}"
+    #     return cls(np.copy(node.position))
 
 class Edge():
     def __init__(self, node1, node2):
@@ -73,7 +77,6 @@ class Edge():
         # (i.e. remove the sqrt) to gain a little performance
 
         dist = (dx*dx + dy*dy)**.5
-        print(f"e: {dist}")
         return dist
 
     def draw(self, image, color=(0,255,0), size=3, is_directed=True):
@@ -85,7 +88,10 @@ class Edge():
             return cv2.arrowedLine(image, (x1, y1), (x2,y2), color, thickness=size, line_type=cv2.LINE_AA)
         else:
             return cv2.line(image, (x1, y1), (x2,y2), color, thickness=size, lineType=cv2.LINE_AA)
-
+    def entering_nodes(self):
+        return [self.nodes[0]]
+    def exiting_nodes(self):
+        return [self.nodes[1]]
     def travelable_nodes(self, invert_direction=False, undirected=False):
         entering_node = self.nodes[0]
         exiting_node = self.nodes[1]
@@ -106,6 +112,11 @@ class Edge():
     def contains_node(self, node):
         assert type(node) == Node, "node must be of Node type"
         return node in self.nodes
+
+    # @classmethod
+    # def fromSameObject(cls, edge):
+    #     assert type(edge) == cls, f"edge must be of type {cls}, not {type(edge)}"
+    #     return cls(Node.fromSameObject(edge.nodes[0]), Node.fromSameObject(edge.nodes[1]))
 
 class Intersection():
 
@@ -180,6 +191,11 @@ class Intersection():
         assert type(node) == Node, "node must be of Node type"
         return node in self.nodes
 
+    # @classmethod
+    # def fromSameObject(cls, intersection):
+    #     assert type(intersection) == cls, f"intersection must be of type {cls}, not {type(intersection)}"
+    #     return cls([Node.fromSameObject(node) for node in intersection.nodes])
+
 class Graph():
     def __init__(self):
         self.elements = []
@@ -220,18 +236,49 @@ class Graph():
         else:
             return closest_element
 
-    def find_travelable_nodes(self, point, invert_direction=False, undirected=False):
-        point = np.array(point, dtype=int)
-        assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
-        current_element = self.find_closest_element(point, strictly_travelable=True)
-        if current_element == None:
-            return [], []
-        legal_nodes, illegal_nodes = current_element.travelable_nodes(invert_direction, undirected)
-        return legal_nodes, illegal_nodes
+    # def find_travelable_nodes(self, point, invert_direction=False, undirected=False):
+    #     point = np.array(point, dtype=int)
+    #     assert np.shape(point) == (2,1), f"Incorrect point shape {np.shape(position)} , expected (2,1)"
+    #     current_element = self.find_closest_element(point, strictly_travelable=True)
+    #     if current_element == None:
+    #         return [], []
+    #     legal_nodes, illegal_nodes = current_element.travelable_nodes(invert_direction, undirected)
+    #     return legal_nodes, illegal_nodes
 
     def clear(self):
         self.elements = []
 
+    # @classmethod
+    # def fromSameObject(cls, graph):
+    #     assert type(graph) == cls, f"graph must be of type {cls}, not {type(graph)}"
+    #     ret = cls()
+    #     for element in graph.elements:
+    #         ret.add_element(type(element).fromSameObject(element))
+    #     return ret
+    
+def localise_in_graph(graph, point):
+    current_travelable_element = graph.find_closest_element(point, strictly_travelable=True)
+
+    legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(False, False)
+
+    # print(f"\nLegal node count: {len(legal_nodes)}")
+    # print("Possible legal nodes to travel to")
+    # for node in legal_nodes:
+    #     print(node.position)
+    
+    # special_elements = [current_travelable_element]+legal_nodes
+    # special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))]
+
+    next_travelable_elements = []
+    for node in legal_nodes:
+        for element in graph.elements:
+            if element.travelable == True and node in element.entering_nodes():
+                next_travelable_elements.append(element)
+                # special_elements.append(element)
+                # special_element_colors.append((255,0,255))
+    
+    return current_travelable_element, next_travelable_elements
+    
 if __name__=="__main__":
-    edge = Edge(Node(np.array([[0,0]]).T), Node(np.array([[0,0]]).T))
-    print(edge.is_travelable())
+    node = Node(np.array([[0,0]]).T)
+    print(type(node).fromSameObject(node))
