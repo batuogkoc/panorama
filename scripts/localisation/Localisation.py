@@ -1,7 +1,8 @@
 import sys
 sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/mapping')
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/python_tests/map_annotator')
+sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator')
 sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+from Graph import *
 import rospy
 import numpy as np
 import Panorama
@@ -11,7 +12,6 @@ from utils import *
 import pickle
 import math as m
 from copy import deepcopy
-import map_annotator.annotator as an
 
 map_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/map/map.panorama.pickle"
 directed = True
@@ -28,13 +28,10 @@ def node():
     map_image_original = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3), iterations=2)
     graph_opened = False
     with open("/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/graph.pickle", "rb") as f:
-        nodes, edges = pickle.load(f) 
+        loaded_object = pickle.load(f) 
         graph_opened = True
-        if not directed:
-            for edge in edges:
-                new_edge = (edge[1], edge[0])
-                if not new_edge in edges:
-                    edges.append(new_edge)
+        if type(loaded_object) == Graph:
+            graph=loaded_object
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
     global out
     out = cv2.VideoWriter("output.avi", fourcc, 15, (1200, 1400))
@@ -72,16 +69,21 @@ def node():
        
 
         vehicle_pos_pixels = (int(round(vehicle_pos[0][0])), int(round(vehicle_pos[1][0])))
-        current_edge, next_edges = an.localise_in_graph(vehicle_pos_pixels, edges)
-        rospy.loginfo(f"\n\nAvailable roads: {len(next_edges)}")
-        rospy.loginfo("Possible nodes to travel to")
-        for edge in next_edges:
-            rospy.loginfo(edge[1])
-        map_image = an.draw_edges(map_image, edges, special_edges=[current_edge]+next_edges, special_edge_colors=[(0,255,255)]+[(255,0,255) for i in range(len(next_edges))], use_arrows=directed)
-        map_image = an.draw_nodes(map_image, nodes)
+
+        current_travelable_element, next_travelable_elements = localise_in_graph(graph, vehicle_pos.round().astype(int))
+        legal_nodes = current_travelable_element.exiting_nodes()
+        print(f"\nLegal node count: {len(legal_nodes)}")
+        print("Possible legal nodes to travel to")
+        for node in legal_nodes:
+            print(panorama.pixel_to_meters(node.position))
+        
+        special_elements = [current_travelable_element]+legal_nodes + next_travelable_elements
+        special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))] + [(255,0,255) for i in range(len(next_travelable_elements))]
+        map_image = graph.draw(map_image, special_elements, special_element_colors)
+
         map_image = cv2.fillPoly(map_image, [marker_final], (255,255,0), lineType=cv2.LINE_AA)
-        img  = imshow_r("win", map_image, (1200,1400))
-        out.write(img)
+        img  = imshow_r("win", map_image, (600,900))
+        # out.write(img)
         if cv2.waitKey(1) == ord("q"):
             return
         

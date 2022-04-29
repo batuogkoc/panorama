@@ -1,8 +1,9 @@
 <launch>
+    <arg name="rate" default="1"/>
     <include file="$(find spark_mini_description)/launch/description_dynamic.launch" />
     <!-- 
         <node name="odom_to_tf" pkg="panorama" type="OdomTf.py"/>
     -->
-    <node pkg="rosbag" type="play" name="player" output="screen" args="--rate 0.1  $(find panorama)/rosbag/2022-03-18-15-47-58.bag"/>
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--rate $(arg rate)  $(find panorama)/rosbag/2022-03-18-15-47-58.bag"/>
     <node pkg="image_transport" type="republish" name="republish" args="compressed in:=/main_camera/image/ out:=/slam_camera"/>
 </launch>

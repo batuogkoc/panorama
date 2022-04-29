@@ -199,11 +199,18 @@ class Intersection():
 class Graph():
     def __init__(self):
         self.elements = []
-    def draw(self, image, special_elements=[], special_element_colors=[]):
+    def draw(self, image, special_elements=[], special_element_colors=[], draw_order=[]):
         ret = np.copy(image)
-        for element in self.elements:
-            if not element in special_elements:
-                ret = element.draw(ret)
+        drawn_elements = [False for i in range(len(self.elements))]
+        for element_type in draw_order:
+            for i, element in enumerate(self.elements):
+                if not element in special_elements and type(element)==element_type:
+                    ret = element.draw(ret)
+                    drawn_elements[i] = True
+        for i, element in enumerate(self.elements):
+                if not element in special_elements and drawn_elements[i]==False:
+                    ret = element.draw(ret)
+                    drawn_elements[i] = True
         for element in self.elements:
             if element in special_elements:
                 ret = element.draw(ret, color=special_element_colors[special_elements.index(element)])
