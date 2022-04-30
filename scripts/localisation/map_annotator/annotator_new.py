@@ -188,7 +188,7 @@ if __name__ == "__main__":
         if state != 6:
             intersection = []
 
-        frame = graph.draw(frame, special_elements=special_elements, special_element_colors=special_element_colors, draw_order=[Intersection, Edge, Node])
+        frame = graph.draw(frame, special_elements=special_elements, special_element_colors=special_element_colors, draw_order=[Edge, Intersection, Node], size=3)
         frame = resizable_image.resize(frame)
         cv2.imshow(win_name, frame)
         key = cv2.waitKey(1) 

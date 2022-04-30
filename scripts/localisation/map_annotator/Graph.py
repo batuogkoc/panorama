@@ -158,7 +158,12 @@ class Intersection():
         center = self.__center_point()
         x = center[0][0]
         y = center[1][0]
-        ret = putTextCenter(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
+        nodes_positions = self.nodes[0].position
+        for i in range(1,len(self.nodes)):
+            nodes_positions = np.hstack((nodes_positions, self.nodes[i].position))
+        d_x = np.max(nodes_positions[0,:])-np.min(nodes_positions[0,:])
+        d_y = np.max(nodes_positions[1,:])-np.min(nodes_positions[1,:])
+        ret = putTextCenter(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size*d_y/60, text_color,thickness=size)
         # ret = cv2.putText(ret, "I", (x, y), cv2.FONT_HERSHEY_COMPLEX, size, text_color,thickness=size)
         return ret
     def distance_to(self, point):
@@ -199,21 +204,22 @@ class Intersection():
 class Graph():
     def __init__(self):
         self.elements = []
-    def draw(self, image, special_elements=[], special_element_colors=[], draw_order=[]):
+    def draw(self, image,special_elements=[], special_element_colors=[], draw_order=[], size=3):
         ret = np.copy(image)
+        height, width, depth = np.shape(ret)
         drawn_elements = [False for i in range(len(self.elements))]
         for element_type in draw_order:
             for i, element in enumerate(self.elements):
                 if not element in special_elements and type(element)==element_type:
-                    ret = element.draw(ret)
+                    ret = element.draw(ret, size=size)
                     drawn_elements[i] = True
         for i, element in enumerate(self.elements):
                 if not element in special_elements and drawn_elements[i]==False:
-                    ret = element.draw(ret)
+                    ret = element.draw(ret, size=size)
                     drawn_elements[i] = True
         for element in self.elements:
             if element in special_elements:
-                ret = element.draw(ret, color=special_element_colors[special_elements.index(element)])
+                ret = element.draw(ret, color=special_element_colors[special_elements.index(element)], size=size)
         return ret
 
     def add_element(self, element):
