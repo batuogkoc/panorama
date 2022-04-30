@@ -101,7 +101,8 @@ def node():
                     if node in enterable_nodes:
                         next_travelable_elements.append(element)
                         travelable_nodes += element.exiting_nodes()
-                        travelable_nodes.remove(node)#so we dont try to come back the way we came if we are entering in the wrong direction
+                        if node in travelable_nodes:
+                            travelable_nodes.remove(node)#so we dont try to come back the way we came if we are entering in the wrong direction
         
         print(f"\nTravelable node count: {len(travelable_nodes)}")
         print("Possible legal nodes to travel to")
