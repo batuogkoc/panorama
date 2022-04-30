@@ -57,13 +57,16 @@ def node():
         vehicle_pos, vehicle_rot = htm_to_pos_rot(htm_only_z)
         vehicle_rot = vehicle_rot[0:2,0:2]
         vehicle_pos = vehicle_pos[0:2] + np.array([[-53,1.5]]).T
+        map_to_vehicle_htm=np.vstack((np.hstack((vehicle_rot, vehicle_pos)), np.array([[0,0,1]])))
 
         marker = np.array([[0,0],
                            [-0.5,-0.5],
                            [1,0],
                            [-0.5, 0.5]]).T*2
-        marker = np.matmul(vehicle_rot, marker)
-        marker_final = marker + vehicle_pos
+        marker = np.vstack((marker, np.ones((1,np.shape(marker)[1]))))
+        # marker = np.matmul(vehicle_rot, marker)
+        # marker_final = marker + vehicle_pos
+        marker_final = np.matmul(map_to_vehicle_htm, marker)[0:2]
         vehicle_pos = panorama.meters_to_pixels(vehicle_pos)
         marker_final = np.round(panorama.meters_to_pixels(marker_final)).astype(np.int32)
         marker_final = marker_final.T.astype(np.int32)
@@ -86,8 +89,9 @@ def node():
         print(f"\nLegal node count: {len(legal_nodes)}")
         print("Possible legal nodes to travel to")
         for node in legal_nodes:
-            print(panorama.pixel_to_meters(node.position))
-        
+            node_position_meters = panorama.pixel_to_meters(node.position)
+            print(htm_multipliable_points_to_points(np.matmul(np.linalg.inv(map_to_vehicle_htm), points_to_htm_multipliable_points(node_position_meters))))
+
         special_elements = [current_travelable_element]+legal_nodes #+ next_travelable_elements
         special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(legal_nodes))]# + [(255,0,255) for i in range(len(next_travelable_elements))]
         map_image = graph.draw(map_image, special_elements, special_element_colors, draw_order=[Edge, Intersection, Node])
@@ -100,10 +104,10 @@ def node():
         
 
 if __name__=="__main__":
-    try:
-        node()
-    except Exception as e:
-        rospy.loginfo("Quitting: " + str(e))
-    finally:
-        cv2.destroyAllWindows()
-        # out.release()
+    # try:
+    node()
+    # except Exception as e:
+    #     rospy.loginfo("Quitting: " + str(e))
+    # finally:
+    #     cv2.destroyAllWindows()
+    #     # out.release()
