@@ -217,9 +217,9 @@ class Graph():
                 if not element in special_elements and drawn_elements[i]==False:
                     ret = element.draw(ret, size=size)
                     drawn_elements[i] = True
-        for element in self.elements:
-            if element in special_elements:
-                ret = element.draw(ret, color=special_element_colors[special_elements.index(element)], size=size)
+        for i, element in enumerate(special_elements):
+            if element in self.elements:
+                ret = element.draw(ret, color=special_element_colors[i], size=size)
         return ret
 
     def add_element(self, element):
@@ -274,21 +274,11 @@ def localise_in_graph(graph, point):
 
     legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(False, False)
 
-    # print(f"\nLegal node count: {len(legal_nodes)}")
-    # print("Possible legal nodes to travel to")
-    # for node in legal_nodes:
-    #     print(node.position)
-    
-    # special_elements = [current_travelable_element]+legal_nodes
-    # special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))]
-
     next_travelable_elements = []
     for node in legal_nodes:
         for element in graph.elements:
             if element.travelable == True and node in element.entering_nodes():
                 next_travelable_elements.append(element)
-                # special_elements.append(element)
-                # special_element_colors.append((255,0,255))
     
     return current_travelable_element, next_travelable_elements
     

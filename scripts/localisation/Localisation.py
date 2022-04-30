@@ -84,16 +84,34 @@ def node():
                 is_vehicle_reversed = True #if the dot product is negative we are going in the wrong direction
             else:
                 is_vehicle_reversed = False
+        if type(current_travelable_element) == Edge:
+            legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(invert_direction=is_vehicle_reversed)
+        else:
+            legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(invert_direction=False)
 
-        legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(invert_direction=is_vehicle_reversed)
-        print(f"\nLegal node count: {len(legal_nodes)}")
-        print("Possible legal nodes to travel to")
+        next_travelable_elements = []
+        travelable_nodes = []
         for node in legal_nodes:
+            for element in graph.elements:
+                if element.travelable == True:
+                    if is_vehicle_reversed == False:
+                        enterable_nodes=element.entering_nodes()
+                    else:
+                        enterable_nodes=element.exiting_nodes()
+                    if node in enterable_nodes:
+                        next_travelable_elements.append(element)
+                        travelable_nodes += element.exiting_nodes()
+                        travelable_nodes.remove(node)#so we dont try to come back the way we came if we are entering in the wrong direction
+        
+        print(f"\nTravelable node count: {len(travelable_nodes)}")
+        print("Possible legal nodes to travel to")
+        for node in travelable_nodes:
             node_position_meters = panorama.pixel_to_meters(node.position)
             print(htm_multipliable_points_to_points(np.matmul(np.linalg.inv(map_to_vehicle_htm), points_to_htm_multipliable_points(node_position_meters))))
 
-        special_elements = [current_travelable_element]+legal_nodes #+ next_travelable_elements
-        special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(legal_nodes))]# + [(255,0,255) for i in range(len(next_travelable_elements))]
+        special_elements = [current_travelable_element] + next_travelable_elements + travelable_nodes
+        special_element_colors = [(0,255,255)]+  [(255,255,0) for i in range(len(next_travelable_elements))] + [(255,0,255) for i in range(len(travelable_nodes))]
+        
         map_image = graph.draw(map_image, special_elements, special_element_colors, draw_order=[Edge, Intersection, Node])
 
         map_image = cv2.fillPoly(map_image, [marker_final], (255,255,0), lineType=cv2.LINE_AA)
