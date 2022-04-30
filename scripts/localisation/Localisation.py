@@ -34,7 +34,8 @@ def node():
             graph=loaded_object
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
     global out
-    out = cv2.VideoWriter("output.avi", fourcc, 15, (1200, 1400))
+    # out = cv2.VideoWriter("output.avi", fourcc, 15, (1200, 1400))
+    is_vehicle_reversed = True
     while True:
         map_image = np.copy(map_image_original)
         try:
@@ -68,18 +69,28 @@ def node():
         marker_final = marker_final.T.astype(np.int32)
        
 
-        vehicle_pos_pixels = (int(round(vehicle_pos[0][0])), int(round(vehicle_pos[1][0])))
+        vehicle_pos_pixels = vehicle_pos.round().astype(int)
 
-        current_travelable_element, next_travelable_elements = localise_in_graph(graph, vehicle_pos.round().astype(int))
-        legal_nodes = current_travelable_element.exiting_nodes()
+        # current_travelable_element, next_travelable_elements = localise_in_graph(graph, vehicle_pos.round().astype(int))
+        
+        current_travelable_element =graph.find_closest_element(vehicle_pos_pixels, strictly_travelable=True)
+        if type(current_travelable_element) == Edge:
+            edge_vector=current_travelable_element.nodes[1].position-current_travelable_element.nodes[0].position
+            dot = np.matmul(np.matmul(vehicle_rot, np.array([[1,0]]).T), edge_vector.T)#inner matmul vreates a unit vector in the direction of car, the second matmul is a dot product between where the car is headed and where the travelable road element is going
+            if dot[0][0]<0:
+                is_vehicle_reversed = True #if the dot product is negative we are going in the wrong direction
+            else:
+                is_vehicle_reversed = False
+
+        legal_nodes, illegal_nodes = current_travelable_element.travelable_nodes(invert_direction=is_vehicle_reversed)
         print(f"\nLegal node count: {len(legal_nodes)}")
         print("Possible legal nodes to travel to")
         for node in legal_nodes:
             print(panorama.pixel_to_meters(node.position))
         
-        special_elements = [current_travelable_element]+legal_nodes + next_travelable_elements
-        special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(special_elements))] + [(255,0,255) for i in range(len(next_travelable_elements))]
-        map_image = graph.draw(map_image, special_elements, special_element_colors)
+        special_elements = [current_travelable_element]+legal_nodes #+ next_travelable_elements
+        special_element_colors = [(0,255,255)]+[(255,0,255) for i in range(len(legal_nodes))]# + [(255,0,255) for i in range(len(next_travelable_elements))]
+        map_image = graph.draw(map_image, special_elements, special_element_colors, draw_order=[Edge, Intersection, Node])
 
         map_image = cv2.fillPoly(map_image, [marker_final], (255,255,0), lineType=cv2.LINE_AA)
         img  = imshow_r("win", map_image, (600,900))
@@ -92,7 +103,7 @@ if __name__=="__main__":
     try:
         node()
     except Exception as e:
-        rospy.loginfo("Quitting: " + e)
+        rospy.loginfo("Quitting: " + str(e))
     finally:
         cv2.destroyAllWindows()
-        out.release()
+        # out.release()
