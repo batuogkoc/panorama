@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import sys
+sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
 import cv2
 import numpy as np
 import math as m
