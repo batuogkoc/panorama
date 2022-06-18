@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import math as m
 from utils import *
+from collections import deque
+import time
 
 class ImageChunk:
     def __init__(self, width, height, top_left_corner_global_pixel_coords, depth = 3):
@@ -20,7 +22,7 @@ class ImageChunk:
         self.height = height
         self.depth = depth
         self.top_left_corner_global_pixel_coords = top_left_corner_global_pixel_coords
-        self.image = np.zeros((height, width, depth))
+        self.image = np.zeros((height, width, depth), dtype=np.uint8)
         self.x_min = top_left_corner_global_pixel_coords[0][0]
         self.y_min = top_left_corner_global_pixel_coords[1][0]
 
@@ -39,7 +41,7 @@ class ImageChunk:
     def __set_image__(self, img):
         self.image = img
     
-    def add_image(self, img, img_top_left_corner_global_pixel_coords):
+    def add_image(self, img, img_top_left_corner_global_pixel_coords, mask=True):
         img_height, img_width, img_depth = np.shape(img)
         assert np.shape(img_top_left_corner_global_pixel_coords) == (2,1), f"img_top_left_corner_global_pixel_coords must be of shape (2,1), not {np.shape(img_top_left_corner_global_pixel_coords)}"
         assert img_depth == self.depth, f"The depth of the image must be the same as the chunk={self.depth}, not {img_depth}"
@@ -57,21 +59,22 @@ class ImageChunk:
         if y_min > self.y_max or y_max < self.y_min:
             return False
 
-        #return if image black, benchmark
-        new_image = np.zeros((self.height, self.width, self.depth))
-        new_image[max(0, y_min-self.y_min):min(self.height, y_max-self.y_min), max(0, x_min-self.x_min):min(self.width, x_max-self.x_min)] = img[max(0, self.y_min-y_min):min(img_height, self.y_max-y_min), max(0, self.x_min-x_min):min(img_width, self.x_max-x_min)]
-        
-
-
-        new_img_gray = cv2.cvtColor(new_image.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-        ret, mask = cv2.threshold(new_img_gray, 1, 255, cv2.THRESH_BINARY)
-        mask_inv = cv2.bitwise_not(mask.astype(np.uint8))
-        #black out area where the new image will fit in the old image
-        old_img_masked = cv2.bitwise_and(self.image, self.image, mask=mask_inv.astype(np.uint8))
-        #stitch images
-        updated_img = (old_img_masked.astype(np.uint8) + new_image.astype(np.uint8))
-        
-        self.__set_image__(updated_img)
+        if mask == True:
+            #return if image black, benchmark
+            new_image = np.zeros((self.height, self.width, self.depth))
+            new_image[max(0, y_min-self.y_min):min(self.height, y_max-self.y_min), max(0, x_min-self.x_min):min(self.width, x_max-self.x_min)] = img[max(0, self.y_min-y_min):min(img_height, self.y_max-y_min), max(0, self.x_min-x_min):min(img_width, self.x_max-x_min)]
+            
+            new_img_gray = cv2.cvtColor(new_image.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+            ret, mask = cv2.threshold(new_img_gray, 1, 255, cv2.THRESH_BINARY)
+            mask_inv = cv2.bitwise_not(mask.astype(np.uint8))
+            #black out area where the new image will fit in the old image
+            old_img_masked = cv2.bitwise_and(self.image, self.image, mask=mask_inv.astype(np.uint8))
+            #stitch images
+            updated_img = (old_img_masked.astype(np.uint8) + new_image.astype(np.uint8))
+            self.__set_image__(updated_img)
+        else:
+            img = img.astype(np.uint8)
+            self.image[max(0, y_min-self.y_min):min(self.height, y_max-self.y_min), max(0, x_min-self.x_min):min(self.width, x_max-self.x_min)] = img[max(0, self.y_min-y_min):min(img_height, self.y_max-y_min), max(0, self.x_min-x_min):min(img_width, self.x_max-x_min)]
         return True
 
 class ImageAppend:
@@ -249,11 +252,15 @@ class ImageAppend:
         
         chunk_count = len(self.chunks.keys())
         chunk_index = 0
+        time_queue = deque(maxlen=10)
+        start_time = time.time()
+        time_queue.append(start_time)
         for chunk in self.chunks.values():
-            ret.add_image(chunk.get_image(), chunk.get_top_left_corner_global_pixel_coords())
+            ret.add_image(chunk.get_image(), chunk.get_top_left_corner_global_pixel_coords(), mask=False)
+            time_queue.append(time.time())
             chunk_index += 1
-            print("Compiling image: {} out of {} chunks, {:.2f}%".format(chunk_index, chunk_count, 100*chunk_index/chunk_count))
-
+            print("Compiling image: {} out of {} chunks, {:.2f} percent, ETA: {:.2f}s".format(chunk_index, chunk_count, 100*chunk_index/chunk_count, ((time_queue[-1]-time_queue[0])/(len(time_queue)-1))*(chunk_count-chunk_index)))
+        print(f"Total time: {time.time()-start_time}s")
         return ret.get_image()
 
 
