@@ -1,6 +1,8 @@
 #usr/bin/env python
 import sys
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+import os
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir + '/../python-utils')
 from CornerDetector import find_corners
 import rospy
 import Panorama
@@ -149,8 +151,8 @@ def main():
 
     times.add("htm")
     # panorama.clear_img()
-    panorama.project_all_cameras(extrapolate_htm=False)
-    # panorama.project_camera("main_camera", extrapolate_htm=True)
+    # panorama.project_all_cameras(extrapolate_htm=False)
+    panorama.project_camera("main_camera", extrapolate_htm=True)
     frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
     times.add("project")
 
@@ -159,6 +161,7 @@ def main():
     #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
     # times.add("detect corners")
     resized_img = imshow_r("a", frame, (1600, 900))
+    cv2.imwrite("a.jpg", resized_img)
     cv2.waitKey(1)
 
     # out.write(resized_img)

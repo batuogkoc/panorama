@@ -8,6 +8,7 @@ from Graph import *
 
 #USER PARAMETERS
 image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map.png" #the path to the input image
+# image_path = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator/barcelona.png" #the path to the input image
 win_scale = 0.6 #how much the input image will be scaled
 
 graph_load_dir = "/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/graph.pickle" #where to load the previous graph from, if you will load. Won't do anytinh if there is no such file

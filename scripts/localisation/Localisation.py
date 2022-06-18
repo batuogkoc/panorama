@@ -1,7 +1,9 @@
 import sys
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/mapping')
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/localisation/map_annotator')
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+import os
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir + '/../mapping')
+sys.path.append(script_dir + '/map_annotator')
+sys.path.append(script_dir + '/../python-utils')
 from Graph import *
 import rospy
 import numpy as np
