@@ -32,7 +32,7 @@ main_camera_transform = None
 left_camera_transform = None
 right_camera_transform = None
 fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
+# out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
 first_time = True
 
 main_time = 0
@@ -153,16 +153,14 @@ def main():
     # panorama.clear_img()
     # panorama.project_all_cameras(extrapolate_htm=False)
     panorama.project_camera("main_camera", extrapolate_htm=True)
-    frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
     times.add("project")
-
-    # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
-    # for corner in right_handed_corners:
-    #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
-    # times.add("detect corners")
-    resized_img = imshow_r("a", frame, (1600, 900))
-    cv2.imwrite("a.jpg", resized_img)
-    cv2.waitKey(1)
+    # frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
+    # # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+    # # for corner in right_handed_corners:
+    # #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+    # # times.add("detect corners")
+    # resized_img = imshow_r("a", frame, (1600, 900))
+    # cv2.waitKey(1)
 
     # out.write(resized_img)
     times.add("imshow")

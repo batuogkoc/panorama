@@ -8,78 +8,13 @@ import numpy as np
 import math as m
 from utils import *
 
-class ImageChunk:
-    def __init__(self, width, height, top_left_corner_global_pixel_coords, depth = 3):
-        assert height != 0 and width != 0, "neither width nor height can be 0"
-        assert np.shape(top_left_corner_global_pixel_coords) == (2,1), f"top_left_corner_global_pixel_coords must be of shape (2,1), not {np.shape(top_left_corner_global_pixel_coords)}"
-        assert type(width) == int, f"width must be of type int, not {type(width)}"
-        assert type(height) == int, f"height must be of type int, not {type(height)}"
-        assert type(depth) == int, f"depth must be of type int, not {type(depth)}"
-
-        self.width = width
-        self.height = height
-        self.depth = depth
-        self.top_left_corner_global_pixel_coords = top_left_corner_global_pixel_coords
-        self.image = np.zeros((height, width, depth))
-        self.x_min = top_left_corner_global_pixel_coords[0][0]
-        self.y_min = top_left_corner_global_pixel_coords[1][0]
-
-        self.x_max = self.x_min + height
-        self.y_max = self.x_min + width
-
-
-
-    def clear_img(self):
-        self.image = np.zeros((height, width, depth))
-    
-    def get_image(self):
-        return self.image
-
-    def __set_image__(self, img):
-        self.image = img
-    
-    def add_image(self, img, img_top_left_corner_global_pixel_coords):
-        img_height, img_width, img_depth = np.shape(img)
-        assert np.shape(img_top_left_corner_global_pixel_coords) == (2,1), f"img_top_left_corner_global_pixel_coords must be of shape (2,1), not {np.shape(img_top_left_corner_global_pixel_coords)}"
-        assert img_depth == self.depth, f"The depth of the image must be the same as the chunk={self.depth}, not {img_depth}"
-        if img_height == 0 and img_width == 0:
-            return False
-
-        x_min = img_top_left_corner_global_pixel_coords[0][0]
-        y_min = img_top_left_corner_global_pixel_coords[1][0]
-
-        x_max = x_min + img_height
-        y_max = y_min + img_width
-
-        if x_min > self.x_max or x_max < self.x_min:
-            return False
-        if y_min > self.y_max or y_max < self.y_min:
-            return False
-
-        #return if image black, benchmark
-        new_image = np.zeros((self.height, self.width, self.depth))
-        new_image[max(0, x_min-self.x_min):min(self.width, x_max-self.x_min), max(0, y_min-self.y_min):min(self.height, y_max-self.y_min)] = img[max(0, self.x_min-x_min):min(img_width, self.x_max-x_min), max(0, self.y_min-y_min):min(img_height, self.y_max-y_min)]
-        
-
-
-        new_img_gray = cv2.cvtColor(new_image.astype(np.uint8), cv2.COLOR_BGR2GRAY)
-        ret, mask = cv2.threshold(new_img_gray, 1, 255, cv2.THRESH_BINARY)
-        mask_inv = cv2.bitwise_not(mask.astype(np.uint8))
-        #black out area where the new image will fit in the old image
-        old_img_masked = cv2.bitwise_and(self.image, self.image, mask=mask_inv.astype(np.uint8))
-        #stitch images
-        updated_img = (old_img_masked.astype(np.uint8) + new_image.astype(np.uint8))
-        
-        self.__set_image__(updated_img)
-        return True
-
 class ImageAppend:
     def __init__(self, width, height, step = 0.2, depth = 3):
         self.step = step
         self.width = width
         self.height = height
         self.depth = depth
-        self.local_origin_global_coords = np.array([[0, 0]], dtype=np.int)  #coordinates of where the map top left corner is in local pixel coordinate frame
+        self.map_corner_coords = np.array([[0, 0]], dtype=np.int)  #coordinates of where the map top left corner is in local pixel coordinate frame
         self.image = np.zeros((height, width, depth))
 
     def updateImage(self, new_img):
@@ -133,6 +68,9 @@ class ImageAppend:
         to_pts_abs = self.local_meter_to_local_pixel_coords(projected_points)
         from_pts = cartesian_cross_product([0,img_width-1], [int(img_height*(2/3)), img_height-1]).astype(np.float32).T
         self.append(img, from_pts, to_pts_abs)
+    
+    def get_image(self):
+        return self.image
 
     def append(self, img, from_pts, to_pts, mask=True, extend_mask=True):
         from_pts = from_pts.T
@@ -217,13 +155,3 @@ class ImageAppend:
         #stitch images
         ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
         self.updateImage(ret)
-
-
-
-if __name__ == "__main__":
-    chunk = ImageChunk(150, 150, np.array([[0],[0]]))
-    chunk.add_image(np.ones((100,100,3))*255, np.array([[50],[50]]))
-    cv2.imshow("img", chunk.get_image())
-    while cv2.waitKey(1) != ord("q"):
-        True
-    cv2.destroyAllWindows()

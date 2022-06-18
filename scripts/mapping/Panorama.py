@@ -1,4 +1,4 @@
-import ImageAppend
+import ImageAppend as ImageAppend
 import cv2
 import numpy as np
 import math as m
@@ -275,8 +275,8 @@ if __name__ == "__main__":
 
 
 class Panorama():
-    def __init__(self, step=0.01):
-        self.image_append = ImageAppend.ImageAppend(0, 0, step=step)
+    def __init__(self, step=0.01, chunk_size=200):
+        self.image_append = ImageAppend.ImageAppend(chunk_size=chunk_size, step=step,depth=3)
         self.cameras = {}
     
     def add_camera(self, camera):
@@ -311,7 +311,7 @@ class Panorama():
             self.project_camera(camera_frame_id, extrapolate_htm=extrapolate_htm)
     
     def get_output_img(self):
-        return self.image_append.image
+        return self.image_append.get_image()
 
     def clear_img(self):
         self.image_append.clear_img()
