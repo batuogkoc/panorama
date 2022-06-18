@@ -1,7 +1,9 @@
 #usr/bin/env python
-import Panorama
 import sys
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+import os
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(script_dir + '/../python-utils')
+import Panorama
 from utils import *
 import numpy as np
 

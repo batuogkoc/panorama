@@ -1,6 +1,8 @@
 #usr/bin/env python
 import sys
-sys.path.insert(1, '/home/batu/projects/self-driving-taxi/catkin_ws/src/panorama/scripts/python-utils')
+import os
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir + '/../python-utils')
 from CornerDetector import find_corners
 import rospy
 import Panorama
@@ -20,6 +22,7 @@ import math as m
 from copy import deepcopy
 from utils import *
 from matplotlib import pyplot as plt
+import psutil
 
 tf_buffer = tf2_ros.Buffer()
 tf_listener = None
@@ -30,7 +33,7 @@ main_camera_transform = None
 left_camera_transform = None
 right_camera_transform = None
 fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
+# out = cv2.VideoWriter("output.avi", fourcc, 15, (1920, 1080))
 first_time = True
 
 main_time = 0
@@ -149,21 +152,21 @@ def main():
 
     times.add("htm")
     # panorama.clear_img()
-    panorama.project_all_cameras(extrapolate_htm=False)
-    # panorama.project_camera("main_camera", extrapolate_htm=True)
-    frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
+    # panorama.project_all_cameras(extrapolate_htm=False)
+    panorama.project_camera("main_camera", extrapolate_htm=True)
     times.add("project")
-
-    # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
-    # for corner in right_handed_corners:
-    #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
-    # times.add("detect corners")
-    resized_img = imshow_r("a", frame, (1600, 900))
-    cv2.waitKey(1)
+    # frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
+    # # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+    # # for corner in right_handed_corners:
+    # #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+    # # times.add("detect corners")
+    # resized_img = imshow_r("a", frame, (1600, 900))
+    # cv2.waitKey(1)
 
     # out.write(resized_img)
     times.add("imshow")
     print(times)
+    # print(psutil.Process(os.getpid()).memory_info().rss/(1024**2))
     rate_control_string = std_msgs.msg.String()
     rate_control_string.data = "Done"
     global rate_control_publisher
@@ -208,5 +211,25 @@ if __name__ == "__main__":
     except Exception as e:
         rospy.logerr(e)
     finally:
+        out_img = panorama.get_output_img()
+        cv2.imshow("a", out_img)
+        print(out_img.dtype)
+        print(np.shape(out_img))
+        # frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
+        # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+        # for corner in right_handed_corners:
+        #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+        # times.add("detect corners")
+        resized_img = imshow_r("a", out_img, (1600, 900))
+        while True:
+            key = cv2.waitKey(1)
+            if key == ord("q"):
+                break
+            elif key == ord("r"):
+                cv2.imwrite("out-resized.jpg", resized_img)
+                break
+            elif key ==ord("s"):
+                cv2.imwrite("out.jpg", out_img)
+                break
         rospy.loginfo("exiting")
-        out.release()
+        # out.release()
