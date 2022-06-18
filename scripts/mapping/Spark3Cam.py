@@ -209,5 +209,19 @@ if __name__ == "__main__":
     except Exception as e:
         rospy.logerr(e)
     finally:
+        frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
+        # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
+        # for corner in right_handed_corners:
+        #     cv2.circle(frame, corner, 3, (255,0,0), thickness=1)
+        # times.add("detect corners")
+        resized_img = imshow_r("a", frame, (1600, 900))
+        while True:
+            key = cv2.waitKey(1)
+            if key == ord("q"):
+                break
+            elif key == ord("r"):
+                cv2.imwrite("out-resized.jpg", resized_img)
+            elif key ==ord("s"):
+                cv2.imwrite("out.jpg", frame)
         rospy.loginfo("exiting")
-        out.release()
+        # out.release()

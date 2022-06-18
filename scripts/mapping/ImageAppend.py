@@ -246,9 +246,13 @@ class ImageAppend:
         if self.chunks == {}:
             return None
         ret = ImageChunk(self.x_max-self.x_min, self.y_max-self.y_min, np.array([[self.x_min], [self.y_min]]), depth=self.depth)
-
+        
+        chunk_count = len(self.chunks.keys())
+        chunk_index = 0
         for chunk in self.chunks.values():
             ret.add_image(chunk.get_image(), chunk.get_top_left_corner_global_pixel_coords())
+            chunk_index += 1
+            print("Compiling image: {} out of {} chunks, {:.2f}%".format(chunk_index, chunk_count, 100*chunk_index/chunk_count))
 
         return ret.get_image()
 
