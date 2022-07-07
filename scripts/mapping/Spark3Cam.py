@@ -212,8 +212,6 @@ if __name__ == "__main__":
         rospy.logerr(e)
     finally:
         out_img = panorama.get_output_img()
-        cv2.imshow("a", out_img)
-        print(out_img.dtype)
         print(np.shape(out_img))
         # frame = cv2.dilate(deepcopy(panorama.get_output_img()), (3,3),iterations=2)
         # right_handed_corners, left_handed_corners, other_corners = find_corners(frame)
