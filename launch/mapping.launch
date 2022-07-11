@@ -1,0 +1,8 @@
+<launch>
+    <include file="$(find panorama)/launch/dynamic_recording.launch">
+        <arg name="rate" value="1"/>
+    </include>
+    <node pkg="panorama" type="multi_cam_mapper.py" name="mapper" output="screen">
+        <rosparam command="load" file="$(find panorama)/config/mapper.yaml"/>
+    </node> 
+</launch>

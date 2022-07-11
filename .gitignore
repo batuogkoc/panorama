@@ -1,8 +1,7 @@
 /.vscode
 /rosbag
-*.png
-*.jpg
 *.avi
 *.mp4
 *.panorama
 *.pickle
+/__pycache__
