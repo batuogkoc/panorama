@@ -6,7 +6,7 @@ sys.path.append(script_dir + '/../../python-utils')
 import cv2
 import numpy as np
 import math as m
-from utils import *
+from python_utils.utils import *
 from collections import deque
 import time
 

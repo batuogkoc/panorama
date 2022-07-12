@@ -1,19 +1,10 @@
-source_frame_id: "odom"
-step: 0.03
+map_frame_id: "odom"
+scale: 0.03
 chunk_size: 200
 
 continous_output: false
 continous_output_frequency: 10
-
-camera_0:
-  frame_id: "main_camera"
-  width: 1250
-  height: 1080
-  depth: 3
-  fov: 60
-  fov_vertical: true
-  image_queue_size: 30
-  htm_queue_size: 30
+continous_output_topic: /map_out
 
 camera_0:
   frame_id: "main_camera"
@@ -39,11 +30,11 @@ camera_1:
   fov_vertical: true
   image_queue_size: 30
   htm_queue_size: 30
-  # orthogonal_roi:
-  #   width_low:
-  #   width_high:
-  #   height_low:
-  #   height_high:
+  orthogonal_roi:
+    width_low: 0
+    width_high: 1
+    height_low: 0.58
+    height_high: 1
 
 camera_2:
   frame_id: "right_camera"
@@ -54,8 +45,8 @@ camera_2:
   fov_vertical: true
   image_queue_size: 30
   htm_queue_size: 30
-  # orthogonal_roi:
-  #   width_low:
-  #   width_high:
-  #   height_low:
-  #   height_high:
+  orthogonal_roi:
+    width_low: 0
+    width_high: 1
+    height_low: 0.58
+    height_high: 1
