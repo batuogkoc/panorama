@@ -340,12 +340,12 @@ class MultiCamProject(Map):
     def global_pixels_to_global_meters(self, global_pixel_coordinates):
         assert np.shape(global_pixel_coordinates)[0] == 2 or np.shape(global_pixel_coordinates)[0] == 3, "invalid global_pixel_coordinates shape, expected 2xn or 3xn"
         if np.shape(global_pixel_coordinates)[0] == 3:
-            transform = np.array([[ 0.0000000, -1.0000000,  0.0000000],
-                                  [-1.0000000,  0.0000000,  0.0000000],
-                                  [ 0.0000000,  0.0000000,  1.0000000]])
+            transform = np.array([[ 1.0000000,  0.0000000,  0.0000000],
+                                  [ 0.0000000, -1.0000000,  0.0000000],
+                                  [ 0.0000000,  0.0000000, -1.0000000]])
         elif np.shape(global_pixel_coordinates)[0] == 2:
-            transform = np.array([[ 0.0000000, -1.0000000],
-                                  [-1.0000000,  0.0000000]])
+            transform = np.array([[ 1.0000000,  0.0000000],
+                                  [ 0.0000000, -1.0000000]])
         global_pixel_coordinates_new_axes = np.matmul(np.linalg.inv(transform), global_pixel_coordinates)
 
         global_meter_coordinates = global_pixel_coordinates_new_axes*self.step
@@ -355,12 +355,12 @@ class MultiCamProject(Map):
     def global_meters_to_global_pixels(self, global_meter_coordinates):
         assert np.shape(global_meter_coordinates)[0] == 2 or np.shape(global_meter_coordinates)[0] == 3, "invalid global_meter_coordinates shape, expected 2xn or 3xn"
         if np.shape(global_meter_coordinates)[0] == 3:
-            transform = np.array([[ 0.0000000, -1.0000000,  0.0000000],
-                                  [-1.0000000,  0.0000000,  0.0000000],
-                                  [ 0.0000000,  0.0000000,  1.0000000]])
+            transform = np.array([[ 1.0000000,  0.0000000,  0.0000000],
+                                  [ 0.0000000, -1.0000000,  0.0000000],
+                                  [ 0.0000000,  0.0000000, -1.0000000]])
         elif np.shape(global_meter_coordinates)[0] == 2:
-            transform = np.array([[ 0.0000000, -1.0000000],
-                                  [-1.0000000,  0.0000000]])
+            transform = np.array([[ 1.0000000,  0.0000000],
+                                  [ 0.0000000, -1.0000000]])
         global_meter_coordinates_new_axes = np.matmul(transform, global_meter_coordinates)
 
         global_pixel_coordinates = global_meter_coordinates_new_axes/self.step
