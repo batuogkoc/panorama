@@ -4,4 +4,4 @@
 *.mp4
 *.panorama
 *.pickle
-/__pycache__
+**/__pycache__/
