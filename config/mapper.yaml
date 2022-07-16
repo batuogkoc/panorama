@@ -1,18 +1,22 @@
 map_frame_id: "odom"
 scale: 0.03
 chunk_size: 200
+extrapolate_htm: True
 
-continous_output: false
-continous_output_frequency: 10
-continous_output_topic: /map_out
+continous_output: True
+continous_output_frequency: 0.5
+continous_output_topic: "/map_out"
+
+save_location: "/home/batu/Desktop"
 
 camera_0:
   frame_id: "main_camera"
+  image_topic: "main_camera/image/compressed"
   width: 1250
   height: 1080
   depth: 3
   fov: 60
-  fov_vertical: true
+  fov_vertical: True
   image_queue_size: 30
   htm_queue_size: 30
   orthogonal_roi:
@@ -20,14 +24,21 @@ camera_0:
     width_high: 1
     height_low: 0.58
     height_high: 1
+  mask_area: [[[0.06481481 ,0.864     ],
+               [1.0925926  ,0.864     ],
+               [0.9907407  ,0.768     ],
+               [0.6944444  ,0.712     ],
+               [0.46296296 ,0.712     ],
+               [0.16666667 ,0.768     ]]]
 
 camera_1:
   frame_id: "left_camera"
+  image_topic: "left_camera/image/compressed"
   width: 1920
   height: 1080
   depth: 3
   fov: 60
-  fov_vertical: true
+  fov_vertical: True
   image_queue_size: 30
   htm_queue_size: 30
   orthogonal_roi:
@@ -38,11 +49,12 @@ camera_1:
 
 camera_2:
   frame_id: "right_camera"
+  image_topic: "right_camera/image/compressed"
   width: 1920
   height: 1080
   depth: 3
   fov: 60
-  fov_vertical: true
+  fov_vertical: True
   image_queue_size: 30
   htm_queue_size: 30
   orthogonal_roi:

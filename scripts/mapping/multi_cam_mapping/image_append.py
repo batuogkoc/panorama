@@ -244,7 +244,7 @@ class ImageAppend:
         # ret = (old_img_new_index.astype(np.uint8) + new_img_new_index.astype(np.uint8))
         # self.updateImage(ret)
 
-    def get_image(self):
+    def get_image(self, debug=False):
         if self.chunks == {}:
             return None
         ret = ImageChunk(self.x_max-self.x_min, self.y_max-self.y_min, np.array([[self.x_min], [self.y_min]]), depth=self.depth)
@@ -254,12 +254,14 @@ class ImageAppend:
         time_queue = deque(maxlen=10)
         start_time = time.time()
         time_queue.append(start_time)
-        for chunk in self.chunks.values():
+        for chunk in list(self.chunks.values()):
             ret.add_image(chunk.get_image(), chunk.get_top_left_corner_global_pixel_coords(), mask=False)
             time_queue.append(time.time())
             chunk_index += 1
-            print("Compiling image: {} out of {} chunks, {:.2f} percent, ETA: {:.2f}s".format(chunk_index, chunk_count, 100*chunk_index/chunk_count, ((time_queue[-1]-time_queue[0])/(len(time_queue)-1))*(chunk_count-chunk_index)))
-        print(f"Total time: {time.time()-start_time}s")
+            if debug:
+                print("Compiling image: {} out of {} chunks, {:.2f} percent, ETA: {:.2f}s".format(chunk_index, chunk_count, 100*chunk_index/chunk_count, ((time_queue[-1]-time_queue[0])/(len(time_queue)-1))*(chunk_count-chunk_index)))
+        if debug:
+            print(f"Total time: {time.time()-start_time}s")
         return ret.get_image()
 
 

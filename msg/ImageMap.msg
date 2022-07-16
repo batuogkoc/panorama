@@ -1,0 +1,2 @@
+float32[16] local_pixels_to_global_meters_htm #row-major order
+sensor_msgs/CompressedImage map_image

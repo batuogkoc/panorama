@@ -12,6 +12,8 @@ import math as m
 import rospy
 from collections import deque
 
+from geometry_msgs.msg import TransformStamped
+
 from python_utils.utils import *
 from copy import deepcopy
 
@@ -60,11 +62,10 @@ class Camera():
     def calculate_roi_corner_pts_pixel(self):
         return cartesian_cross_product([self.width_low, self.width_high], [self.height_low,self.height_high]).astype(np.float32).T
 
-    def add_image_stamped(self, image):
-        t = rospy.Time.now()
-        self.__image_deque.append((t, image))
-
     def add_image_stamped(self, stamp, image):
+        if hasattr(self, "mask"):
+            h, w, d = np.shape(image)
+            cv2.fillPoly(image, self.mask, [0 for i in range(d)])
         self.__image_deque.append((stamp, image))
     
     def get_image_stamped(self, offset=-1):
@@ -92,6 +93,11 @@ class Camera():
     def add_htm(self, htm, htm_stamp):
         if not (htm_stamp in [a[0] for a in self.__htm_deque]):
             self.__htm_deque.append((htm_stamp, htm))
+
+    def add_geometry_msgs_TransformStamped(self, transform: TransformStamped):
+        htm = geometry_msgs_TransformStamped_to_htm(transform)
+        stamp = transform.header.stamp
+        self.add_htm(htm, stamp)
     
     # def set_htm(self, geometry_msgs_TransformStamped):
     #     self.htm = geometry_msgs_TransformStamped_to_htm(geometry_msgs_TransformStamped)
@@ -105,13 +111,20 @@ class Camera():
 
     def get_extrapolated_htm(self, stamp, return_stamped = False):
         indexes = np.argsort([abs(duration_to_sec(stamp-htm_stamped[0])) for htm_stamped in self.__htm_deque])
-        htm1_stamped = self.__htm_deque[indexes[0]]
-        htm2_stamped = self.__htm_deque[indexes[1]]
-        htm = (stamp, extrapolate_htm(htm1_stamped[0], htm1_stamped[1], htm2_stamped[0], htm2_stamped[1], stamp))
+        try:
+            htm1_stamped = self.__htm_deque[indexes[0]]
+            htm2_stamped = self.__htm_deque[indexes[1]]
+            htm = (stamp, extrapolate_htm(htm1_stamped[0], htm1_stamped[1], htm2_stamped[0], htm2_stamped[1], stamp))
+        except IndexError:
+            htm = self.__htm_deque[indexes[0]]
         if return_stamped:
             return htm
         else:
             return htm[1]
+    
+    def set_mask(self, mask):
+        assert len(np.shape(mask)) == 3, "mask must have 3 dimentions, (an array of polygons)"
+        self.mask = mask.round().astype(np.int32)
 
 
 class Panorama_a():
@@ -318,8 +331,8 @@ class MultiCamProject(Map):
         for camera_frame_id in self.cameras.keys():
             self.project_camera(camera_frame_id, extrapolate_htm=extrapolate_htm)
     
-    def get_image(self):
-        return self.image_append.get_image()
+    def get_image(self, debug=False):
+        return self.image_append.get_image(debug=debug)
 
     def clear_img(self):
         self.image_append.clear_img()
@@ -356,7 +369,8 @@ class MultiCamProject(Map):
     def local_pixels_to_global_meters(self, local_pixel_coordinates):
         assert np.shape(local_pixel_coordinates)[0] == 2 or np.shape(local_pixel_coordinates)[0] == 3, "invalid local_pixel_coordinates shape, expected 2xn or 3xn"
         try:
-            global_pixel_coordinates = local_pixel_coordinates[0:2,:] + np.array([[self.image_append.x_min],[self.image_append.y_min]])
+            global_pixel_coordinates = np.copy(local_pixel_coordinates)
+            global_pixel_coordinates[0:2,:] += np.array([[self.image_append.x_min],[self.image_append.y_min]])
             return self.global_pixels_to_global_meters(global_pixel_coordinates)
         except AttributeError:
             raise AttributeError("No image has been added to image_append, local pixel coordinates haven't been initialised")
@@ -365,7 +379,8 @@ class MultiCamProject(Map):
         assert np.shape(global_meter_coordinates)[0] == 2 or np.shape(global_meter_coordinates)[0] == 3, "invalid global_meter_coordinates shape, expected 2xn or 3xn"
         global_pixel_coordinates = self.global_meters_to_global_pixels(global_meter_coordinates)
         try:
-            local_pixel_coordinates = global_pixel_coordinates[0:2,:] - np.array([[self.image_append.x_min],[self.image_append.y_min]])
+            local_pixel_coordinates = np.copy(global_meter_coordinates)
+            local_pixel_coordinates[0:2,:] -= np.array([[self.image_append.x_min],[self.image_append.y_min]])
             return local_pixel_coordinates
         except AttributeError:
             raise AttributeError("No image has been added to image_append, local pixel coordinates haven't been initialised")
