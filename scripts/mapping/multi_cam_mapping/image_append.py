@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(script_dir, "../../python_utils")))
 import cv2
 import numpy as np
 import math as m
-from utils import *
+from kudrone_py_utils import *
 from collections import deque
 import time
 
