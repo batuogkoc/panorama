@@ -2,11 +2,11 @@
 import sys
 import os
 script_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(script_dir + '/../../python-utils')
+sys.path.append(os.path.abspath(os.path.join(script_dir, "../../python_utils")))
 import cv2
 import numpy as np
 import math as m
-from python_utils.utils import *
+from utils import *
 from collections import deque
 import time
 
@@ -269,19 +269,27 @@ if __name__ == "__main__":
     # chunk = ImageChunk(150, 150, np.array([[0],[0]]))
     # chunk.add_image(np.ones((100,100,3))*255, np.array([[50],[50]]))
     # cv2.imshow("img", chunk.get_image())
-    i = ImageAppend(100)
-    from_pts = np.array([[0,0],
-                         [0,100],
-                         [100,100],
-                         [100,0]])
-    to_pts = np.array([[50,0],
-                         [0,50],
-                         [50,100],
-                         [100,50]])
-    to_pts = (to_pts.T + [[75],[75]]).T
-    i.append(np.ones((100,100,3))*255, from_pts.T, to_pts.T, mask=False, extend_mask=False)
-    print(i.chunks)
-    cv2.imshow("a", i.get_image())
-    while cv2.waitKey(1) != ord("q"):
-        True
-    cv2.destroyAllWindows()
+    total_time = 0
+    n = 0
+    for i in range(1000):
+        i = ImageAppend(100)
+        from_pts = np.array([[0,0],
+                            [0,100],
+                            [100,100],
+                            [100,0]])
+        to_pts = np.array([[50,0],
+                            [0,50],
+                            [50,100],
+                            [100,50]])
+        to_pts = (to_pts.T + [[75],[75]]).T
+        s = time.perf_counter()
+        i.append(np.ones((100,100,3))*255, from_pts.T, to_pts.T, mask=False, extend_mask=False)
+        total_time += time.perf_counter()-s
+        n+=1
+        # print(i.chunks)
+        # cv2.imshow("a", i.get_image())
+        # while cv2.waitKey(1) != ord("q"):
+        #     True
+        # cv2.destroyAllWindows()
+    print(total_time/n)
+    

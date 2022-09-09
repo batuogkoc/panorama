@@ -23,7 +23,7 @@ import cv2
 import time
 import math as m
 from copy import deepcopy
-from python_utils.utils import *
+from python_utils import *
 from multi_cam_mapping.multi_cam_project import MultiCamProject, Camera
 from panorama.srv import RequestMap, RequestMapResponse
 from panorama.msg import ImageMap
@@ -140,12 +140,16 @@ class MultiCamMapper():
             if key == ord("q"):
                 break
             elif key == ord("r"):
-                cv2.imwrite(os.path.abspath(os.path.join(self.save_location, "out-resized.jpg")), resized_img)
-                rospy.loginfo("Saved resized image at " + os.path.abspath(os.path.join(self.save_location, "out-resized.jpg")))
+                os.makedirs(self.save_location, exist_ok=True)
+                path = os.path.join(self.save_location, f"{datetime.datetime.now()}-out-resized.jpg")
+                cv2.imwrite(os.path.abspath(path), resized_img)
+                rospy.loginfo("Saved resized image at " + os.path.abspath(path))
                 break
             elif key ==ord("s"):
-                cv2.imwrite(os.path.abspath(os.path.join(self.save_location, "out.jpg")), out_img)
-                rospy.loginfo("Saved real-size image at " + os.path.abspath(os.path.join(self.save_location, "out.jpg")))
+                os.makedirs(self.save_location, exist_ok=True)
+                path = os.path.join(self.save_location, f"{datetime.datetime.now()}-out.jpg")
+                cv2.imwrite(os.path.abspath(path), out_img)
+                rospy.loginfo("Saved real-size image at " + os.path.abspath(path))
                 break
         rospy.loginfo("exiting")
 
